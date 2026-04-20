@@ -1005,7 +1005,7 @@ function ensureQuestionAreaVisible() {
     }
 
     const rect = questionArea.getBoundingClientRect();
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    const viewportHeight = window.innerHeight ?? document.documentElement.clientHeight;
     const visibleTop = Math.max(rect.top, 0);
     const visibleBottom = Math.min(rect.bottom, viewportHeight);
     const visibleHeight = Math.max(0, visibleBottom - visibleTop);

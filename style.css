@@ -18,7 +18,7 @@ body {
 .container {
     width: min(1280px, 100%);
     margin: 0 auto;
-    padding: 24px clamp(12px, 2.5vw, 32px) 40px;
+    padding: 24px clamp(12px, 2.5vw, 32px) clamp(32px, 4vh, 40px);
 }
 
 h1 {
