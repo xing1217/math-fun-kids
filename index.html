@@ -15,6 +15,7 @@
             <div class="toolbar">
                 <button id="switch-mode">切換到九九乘法</button>
                 <button id="toggle-sound">🔊 音效：開</button>
+                <button id="toggle-bgm">🎵 背景音樂：開</button>
                 <p class="mode-info">目前模式：<span id="mode-label">加減法闖關（1~3 位數）</span></p>
             </div>
 
@@ -39,6 +40,22 @@
 
             <div id="feedback-area" class="panel feedback">
                 <p id="feedback">準備好就開始挑戰吧！</p>
+            </div>
+
+            <div id="badge-panel" class="panel">
+                <h2>🏅 成就徽章</h2>
+                <p id="badge-hint">達成條件就能解鎖徽章！</p>
+                <ul id="badge-list" class="badge-list"></ul>
+            </div>
+
+            <div id="leaderboard-panel" class="panel">
+                <h2>🏆 本機排行榜（前 5 名）</h2>
+                <div class="leaderboard-actions">
+                    <input type="text" id="player-name" placeholder="請輸入玩家名稱（最多 12 字）" maxlength="12" aria-label="玩家名稱輸入框">
+                    <button id="save-score">儲存目前分數</button>
+                </div>
+                <p id="leaderboard-hint">每次儲存會記錄目前分數、星星與模式。</p>
+                <ol id="leaderboard-list"></ol>
             </div>
 
             <div id="fx-layer" aria-hidden="true"></div>
