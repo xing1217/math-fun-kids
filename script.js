@@ -16,12 +16,17 @@ const scoreText = document.getElementById("score");
 const levelText = document.getElementById("level");
 const streakText = document.getElementById("streak");
 const starsText = document.getElementById("stars");
+const storyTitleText = document.getElementById("story-title");
+const storyDescText = document.getElementById("story-desc");
+const storyProgressText = document.getElementById("story-progress");
 const startButton = document.getElementById("start-game");
 const nextButton = document.getElementById("next-question");
+const toggleAutoNextButton = document.getElementById("toggle-auto-next");
 const resetButton = document.getElementById("reset");
 const questionText = document.getElementById("question");
 const answerInput = document.getElementById("answer");
 const submitButton = document.getElementById("submit-answer");
+const touchKeypad = document.getElementById("touch-keypad");
 const feedbackText = document.getElementById("feedback");
 const fxLayer = document.getElementById("fx-layer");
 const badgeHintText = document.getElementById("badge-hint");
@@ -40,6 +45,8 @@ const SCORE_PENALTY = 2;
 const STAR_STREAK_REQUIREMENT = 3;
 /** 排行榜只保留前幾名 */
 const LEADERBOARD_LIMIT = 5;
+/** 自動下一題延遲毫秒 */
+const AUTO_NEXT_DELAY_MS = 900;
 
 // ===== localStorage Key =====
 const LEADERBOARD_STORAGE_KEY = "mathFunKidsLeaderboardV1";
@@ -91,6 +98,34 @@ const BADGE_DEFINITIONS = [
     }
 ];
 
+const STORY_CHAPTERS = [
+    {
+        title: "序章：新手村出發",
+        description: "你是數學小勇者，準備離開新手村展開冒險！",
+        minCorrect: 0
+    },
+    {
+        title: "第一章：史萊姆草原",
+        description: "草原上的史萊姆來襲！答題攻擊，守護村莊！",
+        minCorrect: 4
+    },
+    {
+        title: "第二章：巨木迷宮",
+        description: "迷宮裡藏著算術機關，破解它們才能前進。",
+        minCorrect: 9
+    },
+    {
+        title: "第三章：乘法火山",
+        description: "火山魔物會乘法咒語，用正確答案反擊！",
+        minCorrect: 15
+    },
+    {
+        title: "最終章：星光神殿",
+        description: "你已是數學英雄，繼續挑戰刷新最高分吧！",
+        minCorrect: 24
+    }
+];
+
 // ===== 遊戲狀態（集中管理，避免散落） =====
 const gameState = {
     // mode: "addSub" = 加減法, "multiply" = 九九乘法
@@ -105,12 +140,14 @@ const gameState = {
     totalWrong: 0,
     currentQuestion: null,
     started: false,
+    autoNextEnabled: true,
     soundEnabled: true,
     bgmEnabled: true,
     unlockedBadgeIds: new Set()
 };
 
 let leaderboardData = [];
+let autoNextTimerId = null;
 
 // ===== 音效與背景音樂（使用 Web Audio，無需外部音檔） =====
 let audioContext = null;
@@ -372,6 +409,75 @@ function renderBgmButton() {
 }
 
 /**
+ * 更新自動下一題按鈕文案。
+ */
+function renderAutoNextButton() {
+    toggleAutoNextButton.textContent = gameState.autoNextEnabled ? "⏭️ 自動下一題：開" : "⏸️ 自動下一題：關";
+}
+
+/**
+ * 根據答對總數取得目前劇情章節。
+ */
+function getCurrentStoryChapter() {
+    for (let index = STORY_CHAPTERS.length - 1; index >= 0; index -= 1) {
+        if (gameState.totalCorrect >= STORY_CHAPTERS[index].minCorrect) {
+            return {
+                chapter: STORY_CHAPTERS[index],
+                chapterIndex: index
+            };
+        }
+    }
+
+    return {
+        chapter: STORY_CHAPTERS[0],
+        chapterIndex: 0
+    };
+}
+
+/**
+ * 渲染 RPG 劇情面板。
+ */
+function renderStory() {
+    const { chapter, chapterIndex } = getCurrentStoryChapter();
+    storyTitleText.textContent = chapter.title;
+    storyDescText.textContent = chapter.description;
+
+    const nextChapter = STORY_CHAPTERS[chapterIndex + 1];
+    if (!nextChapter) {
+        storyProgressText.textContent = "任務進度：已通關主線！持續答題挑戰傳說分數。";
+        return;
+    }
+
+    const remaining = Math.max(0, nextChapter.minCorrect - gameState.totalCorrect);
+    storyProgressText.textContent = `任務進度：再答對 ${remaining} 題可前往${nextChapter.title.replace("：", " ")}`;
+}
+
+/**
+ * 清除自動下一題計時器。
+ */
+function clearAutoNextTimer() {
+    if (autoNextTimerId !== null) {
+        window.clearTimeout(autoNextTimerId);
+        autoNextTimerId = null;
+    }
+}
+
+/**
+ * 排程自動進入下一題。
+ */
+function scheduleAutoNextQuestion() {
+    if (!gameState.autoNextEnabled || !gameState.started) {
+        return;
+    }
+
+    clearAutoNextTimer();
+    autoNextTimerId = window.setTimeout(() => {
+        autoNextTimerId = null;
+        generateAndShowQuestion();
+    }, AUTO_NEXT_DELAY_MS);
+}
+
+/**
  * 顯示星星爆發小動畫，增強獎勵感。
  */
 function popStarAnimation() {
@@ -595,6 +701,7 @@ function generateAndShowQuestion() {
         return;
     }
 
+    clearAutoNextTimer();
     gameState.currentQuestion = createQuestionByMode();
     questionText.textContent = gameState.currentQuestion.text;
     answerInput.value = "";
@@ -679,12 +786,15 @@ function submitAnswer() {
     }
 
     renderStatus();
+    renderStory();
+    scheduleAutoNextQuestion();
 }
 
 /**
  * 重設進度：回到初始狀態。
  */
 function resetProgress() {
+    clearAutoNextTimer();
     gameState.score = 0;
     gameState.streak = 0;
     gameState.stars = 0;
@@ -699,6 +809,7 @@ function resetProgress() {
     answerInput.value = "";
     feedbackText.textContent = "進度已重設，準備好再開始！";
     renderStatus();
+    renderStory();
 }
 
 /**
@@ -707,6 +818,7 @@ function resetProgress() {
  * - 清空當前題目並請玩家開始新回合
  */
 function toggleMode() {
+    clearAutoNextTimer();
     gameState.mode = gameState.mode === "addSub" ? "multiply" : "addSub";
     gameState.streak = 0;
     gameState.currentQuestion = null;
@@ -717,6 +829,7 @@ function toggleMode() {
     feedbackText.textContent = "新模式準備完成！";
     renderMode();
     renderStatus();
+    renderStory();
 }
 
 /**
@@ -747,6 +860,54 @@ function toggleBgm() {
 }
 
 /**
+ * 切換自動下一題開關。
+ */
+function toggleAutoNext() {
+    gameState.autoNextEnabled = !gameState.autoNextEnabled;
+    if (!gameState.autoNextEnabled) {
+        clearAutoNextTimer();
+    }
+    renderAutoNextButton();
+    feedbackText.textContent = gameState.autoNextEnabled ? "已開啟自動下一題 ⏭️" : "已關閉自動下一題 ⏸️";
+}
+
+/**
+ * 初始化觸控數字鍵盤。
+ */
+function setupTouchKeypad() {
+    if (!touchKeypad) {
+        return;
+    }
+
+    touchKeypad.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLButtonElement)) {
+            return;
+        }
+
+        const key = target.dataset.key;
+        if (!key) {
+            return;
+        }
+
+        if (key === "clear") {
+            answerInput.value = "";
+            answerInput.focus();
+            return;
+        }
+
+        if (key === "backspace") {
+            answerInput.value = answerInput.value.slice(0, -1);
+            answerInput.focus();
+            return;
+        }
+
+        answerInput.value += key;
+        answerInput.focus();
+    });
+}
+
+/**
  * 開始遊戲。
  */
 function startGame() {
@@ -764,6 +925,7 @@ function startGame() {
 switchModeButton.addEventListener("click", toggleMode);
 toggleSoundButton.addEventListener("click", toggleSound);
 toggleBgmButton.addEventListener("click", toggleBgm);
+toggleAutoNextButton.addEventListener("click", toggleAutoNext);
 startButton.addEventListener("click", startGame);
 nextButton.addEventListener("click", generateAndShowQuestion);
 submitButton.addEventListener("click", submitAnswer);
@@ -790,6 +952,9 @@ loadBadgeProgress();
 renderMode();
 renderSoundButton();
 renderBgmButton();
+renderAutoNextButton();
 renderStatus();
+renderStory();
 renderBadges();
 renderLeaderboard();
+setupTouchKeypad();
