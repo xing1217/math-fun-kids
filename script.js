@@ -41,6 +41,7 @@ const startButton = document.getElementById("start-game");
 const nextButton = document.getElementById("next-question");
 const toggleAutoNextButton = document.getElementById("toggle-auto-next");
 const resetButton = document.getElementById("reset");
+const questionArea = document.getElementById("question-area");
 const questionText = document.getElementById("question");
 const answerInput = document.getElementById("answer");
 const submitButton = document.getElementById("submit-answer");
@@ -992,6 +993,26 @@ function saveCurrentScore() {
 }
 
 /**
+ * 確保題目區在目前視窗範圍內，避免在小螢幕操作時看不到題目。
+ */
+function ensureQuestionAreaVisible() {
+    if (!questionArea) {
+        return;
+    }
+
+    const rect = questionArea.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    const isOutsideViewport = rect.top < 0 || rect.bottom > viewportHeight;
+
+    if (isOutsideViewport) {
+        questionArea.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+    }
+}
+
+/**
  * 產生下一題並顯示。
  */
 function generateAndShowQuestion() {
@@ -1006,6 +1027,7 @@ function generateAndShowQuestion() {
     questionText.textContent = gameState.currentQuestion.text;
     answerInput.value = "";
     answerInput.focus();
+    requestAnimationFrame(ensureQuestionAreaVisible);
     feedbackText.textContent = "請輸入答案後按「提交答案」。";
     renderStatus();
     renderBattle();
@@ -1377,6 +1399,10 @@ answerInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
         submitAnswer();
     }
+});
+
+answerInput.addEventListener("focus", () => {
+    setTimeout(ensureQuestionAreaVisible, 120);
 });
 
 // 玩家名稱輸入框按 Enter 可直接儲存分數
