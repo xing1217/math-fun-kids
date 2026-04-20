@@ -16,9 +16,9 @@ body {
 }
 
 .container {
-    max-width: 760px;
+    width: min(1280px, 100%);
     margin: 0 auto;
-    padding: 24px 16px 40px;
+    padding: 24px clamp(12px, 2.5vw, 32px) clamp(32px, 4vh, 40px) clamp(12px, 2.5vw, 32px);
 }
 
 h1 {
@@ -375,6 +375,77 @@ input {
     height: 0;
 }
 
+@media (min-width: 980px) {
+    #game {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(320px, 1fr));
+        grid-template-areas:
+            "toolbar toolbar"
+            "score question"
+            "battle question"
+            "equipment question"
+            "story feedback"
+            "actions actions"
+            "badge leaderboard"
+            "fx fx";
+        gap: 14px;
+        align-items: start;
+    }
+
+    .toolbar {
+        grid-area: toolbar;
+        margin-bottom: 0;
+    }
+
+    #score-board {
+        grid-area: score;
+    }
+
+    #battle-panel {
+        grid-area: battle;
+    }
+
+    #equipment-panel {
+        grid-area: equipment;
+    }
+
+    #story-panel {
+        grid-area: story;
+    }
+
+    .actions {
+        grid-area: actions;
+        margin-bottom: 0;
+    }
+
+    #question-area {
+        grid-area: question;
+        position: sticky;
+        top: 16px;
+        z-index: 5;
+    }
+
+    #feedback-area {
+        grid-area: feedback;
+    }
+
+    #badge-panel {
+        grid-area: badge;
+    }
+
+    #leaderboard-panel {
+        grid-area: leaderboard;
+    }
+
+    #fx-layer {
+        grid-area: fx;
+    }
+
+    .panel {
+        margin-bottom: 0;
+    }
+}
+
 .pop-star {
     position: absolute;
     font-size: 1.6rem;
@@ -415,6 +486,12 @@ input {
 }
 
 @media (max-width: 620px) {
+    .container {
+        /* 先給固定值，再用 env() 疊加安全區，作為不支援 env() 的回退寫法 */
+        padding-bottom: 24px;
+        padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    }
+
     #score-board {
         grid-template-columns: 1fr;
     }
@@ -431,5 +508,9 @@ input {
 
     #player-name {
         width: 100%;
+    }
+
+    .touch-keypad {
+        max-width: 100%;
     }
 }

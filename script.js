@@ -41,6 +41,7 @@ const startButton = document.getElementById("start-game");
 const nextButton = document.getElementById("next-question");
 const toggleAutoNextButton = document.getElementById("toggle-auto-next");
 const resetButton = document.getElementById("reset");
+const questionArea = document.getElementById("question-area");
 const questionText = document.getElementById("question");
 const answerInput = document.getElementById("answer");
 const submitButton = document.getElementById("submit-answer");
@@ -65,6 +66,10 @@ const STAR_STREAK_REQUIREMENT = 3;
 const LEADERBOARD_LIMIT = 5;
 /** 自動下一題延遲毫秒 */
 const AUTO_NEXT_DELAY_MS = 900;
+/** 答案輸入框聚焦後，等待虛擬鍵盤動畫完成再調整可視區 */
+const INPUT_FOCUS_SCROLL_DELAY_MS = 120;
+/** 題目區可見比例低於此值時，主動捲動到可視範圍 */
+const QUESTION_VISIBILITY_THRESHOLD = 0.8;
 const TURN_SWITCH_DELAY_MS = 380;
 const MIN_PLAYER_DAMAGE = 6;
 const PLAYER_DAMAGE_RANDOM_VARIANCE = 5;
@@ -992,6 +997,30 @@ function saveCurrentScore() {
 }
 
 /**
+ * 確保題目區在目前視窗範圍內，避免在小螢幕操作時看不到題目。
+ */
+function ensureQuestionAreaVisible() {
+    if (!questionArea) {
+        return;
+    }
+
+    const rect = questionArea.getBoundingClientRect();
+    const viewportHeight = window.innerHeight ?? document.documentElement.clientHeight;
+    const visibleTop = Math.max(rect.top, 0);
+    const visibleBottom = Math.min(rect.bottom, viewportHeight);
+    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+    const visibleRatio = rect.height > 0 ? visibleHeight / rect.height : 0;
+    const isMostlyOutsideViewport = visibleRatio < QUESTION_VISIBILITY_THRESHOLD;
+
+    if (isMostlyOutsideViewport) {
+        questionArea.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+    }
+}
+
+/**
  * 產生下一題並顯示。
  */
 function generateAndShowQuestion() {
@@ -1006,6 +1035,7 @@ function generateAndShowQuestion() {
     questionText.textContent = gameState.currentQuestion.text;
     answerInput.value = "";
     answerInput.focus();
+    setTimeout(ensureQuestionAreaVisible, INPUT_FOCUS_SCROLL_DELAY_MS);
     feedbackText.textContent = "請輸入答案後按「提交答案」。";
     renderStatus();
     renderBattle();
@@ -1377,6 +1407,10 @@ answerInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
         submitAnswer();
     }
+});
+
+answerInput.addEventListener("focus", () => {
+    setTimeout(ensureQuestionAreaVisible, INPUT_FOCUS_SCROLL_DELAY_MS);
 });
 
 // 玩家名稱輸入框按 Enter 可直接儲存分數
