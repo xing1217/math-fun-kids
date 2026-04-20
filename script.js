@@ -155,6 +155,7 @@ function getDisplayLevel() {
  * digits = 3 -> 100~999
  */
 function randomByDigits(digits) {
+    // 例如 digits = 2 時，範圍為 10~99；digits = 3 時，範圍為 100~999
     const min = digits === 1 ? 1 : 10 ** (digits - 1);
     const max = (10 ** digits) - 1;
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -327,6 +328,7 @@ function submitAnswer() {
         if (gameState.streak % STAR_STREAK_REQUIREMENT === 0) {
             gameState.stars += 1;
             popStarAnimation();
+            feedbackText.textContent += " 獲得 1 顆星星⭐";
         }
 
         if (gameState.mode === "addSub" && currentLevel > previousLevel) {
@@ -338,9 +340,6 @@ function submitAnswer() {
             feedbackText.textContent = "✅ 答對了！很棒，繼續挑戰下一題！";
         }
 
-        if (gameState.streak % STAR_STREAK_REQUIREMENT === 0) {
-            feedbackText.textContent += " 獲得 1 顆星星⭐";
-        }
     } else {
         gameState.score = Math.max(0, gameState.score - SCORE_PENALTY);
         gameState.streak = 0;
