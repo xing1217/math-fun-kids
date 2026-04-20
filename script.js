@@ -66,6 +66,8 @@ const STAR_STREAK_REQUIREMENT = 3;
 const LEADERBOARD_LIMIT = 5;
 /** 自動下一題延遲毫秒 */
 const AUTO_NEXT_DELAY_MS = 900;
+/** 答案輸入框聚焦後，等待虛擬鍵盤動畫完成再調整可視區 */
+const INPUT_FOCUS_SCROLL_DELAY_MS = 120;
 const TURN_SWITCH_DELAY_MS = 380;
 const MIN_PLAYER_DAMAGE = 6;
 const PLAYER_DAMAGE_RANDOM_VARIANCE = 5;
@@ -1002,9 +1004,13 @@ function ensureQuestionAreaVisible() {
 
     const rect = questionArea.getBoundingClientRect();
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-    const isOutsideViewport = rect.top < 0 || rect.bottom > viewportHeight;
+    const visibleTop = Math.max(rect.top, 0);
+    const visibleBottom = Math.min(rect.bottom, viewportHeight);
+    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+    const visibleRatio = rect.height > 0 ? visibleHeight / rect.height : 0;
+    const isMostlyOutsideViewport = visibleRatio < 0.8;
 
-    if (isOutsideViewport) {
+    if (isMostlyOutsideViewport) {
         questionArea.scrollIntoView({
             behavior: "smooth",
             block: "center"
@@ -1402,7 +1408,7 @@ answerInput.addEventListener("keydown", (event) => {
 });
 
 answerInput.addEventListener("focus", () => {
-    setTimeout(ensureQuestionAreaVisible, 120);
+    setTimeout(ensureQuestionAreaVisible, INPUT_FOCUS_SCROLL_DELAY_MS);
 });
 
 // 玩家名稱輸入框按 Enter 可直接儲存分數
