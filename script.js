@@ -16,6 +16,24 @@ const scoreText = document.getElementById("score");
 const levelText = document.getElementById("level");
 const streakText = document.getElementById("streak");
 const starsText = document.getElementById("stars");
+const turnIndicatorText = document.getElementById("turn-indicator");
+const battleLogText = document.getElementById("battle-log");
+const heroCard = document.getElementById("hero-card");
+const enemyCard = document.getElementById("enemy-card");
+const enemyNameText = document.getElementById("enemy-name");
+const enemyAvatarText = document.getElementById("enemy-avatar");
+const heroHpFill = document.getElementById("hero-hp-fill");
+const heroHpText = document.getElementById("hero-hp-text");
+const enemyHpFill = document.getElementById("enemy-hp-fill");
+const enemyHpText = document.getElementById("enemy-hp-text");
+const inventoryList = document.getElementById("inventory-list");
+const slotWeapon = document.getElementById("slot-weapon");
+const slotArmor = document.getElementById("slot-armor");
+const slotRelic = document.getElementById("slot-relic");
+const statAttackText = document.getElementById("stat-attack");
+const statDefenseText = document.getElementById("stat-defense");
+const statMaxHpText = document.getElementById("stat-max-hp");
+const statSpeedText = document.getElementById("stat-speed");
 const storyTitleText = document.getElementById("story-title");
 const storyDescText = document.getElementById("story-desc");
 const storyProgressText = document.getElementById("story-progress");
@@ -47,6 +65,12 @@ const STAR_STREAK_REQUIREMENT = 3;
 const LEADERBOARD_LIMIT = 5;
 /** 自動下一題延遲毫秒 */
 const AUTO_NEXT_DELAY_MS = 900;
+const TURN_SWITCH_DELAY_MS = 380;
+const MIN_PLAYER_DAMAGE = 6;
+const PLAYER_DAMAGE_RANDOM_VARIANCE = 5;
+const MIN_ENEMY_DAMAGE = 3;
+const DEFENSE_REDUCTION_DIVISOR = 2;
+const ENEMY_DAMAGE_RANDOM_VARIANCE = 4;
 
 // ===== localStorage Key =====
 const LEADERBOARD_STORAGE_KEY = "mathFunKidsLeaderboardV1";
@@ -126,6 +150,43 @@ const STORY_CHAPTERS = [
     }
 ];
 
+/**
+ * 敵人章節設定，會依照玩家答對進度逐步切換。
+ * - name: 敵人名稱（含表情）
+ * - avatar: 戰場顯示圖示
+ * - maxHp: 敵人最大 HP
+ * - attack: 敵人攻擊力基礎值
+ * - narrative: 劇情面板中的當前敵人敘事
+ */
+const ENEMY_STAGES = [
+    { name: "👾 史萊姆斥候", avatar: "🟢", maxHp: 60, attack: 8, narrative: "草原邊緣出現第一波史萊姆！" },
+    { name: "🌲 巨木守衛", avatar: "🌳", maxHp: 86, attack: 11, narrative: "巨木迷宮守衛揮舞樹根阻擋去路。" },
+    { name: "🌋 火山魔像", avatar: "🪨", maxHp: 118, attack: 14, narrative: "乘法火山噴發，魔像吸收岩漿力量。" },
+    { name: "✨ 星殿幻獸", avatar: "🦄", maxHp: 150, attack: 17, narrative: "星光神殿的幻獸正在考驗你的計算力！" }
+];
+
+const BASE_PLAYER_STATS = {
+    attack: 10,
+    defense: 3,
+    maxHp: 100,
+    speed: 5
+};
+
+const EQUIPMENT_ITEMS = [
+    { id: "wood_sword", icon: "🗡️", name: "練習木劍", slot: "weapon", bonus: { attack: 4 } },
+    { id: "magic_book", icon: "📘", name: "計算魔導書", slot: "weapon", bonus: { attack: 2, speed: 2 } },
+    { id: "leather_armor", icon: "🦺", name: "皮甲背心", slot: "armor", bonus: { defense: 3, maxHp: 12 } },
+    { id: "guardian_shield", icon: "🛡️", name: "守護小盾", slot: "armor", bonus: { defense: 4 } },
+    { id: "star_charm", icon: "✨", name: "星星護符", slot: "relic", bonus: { maxHp: 16 } },
+    { id: "wind_boots", icon: "👟", name: "疾風鞋", slot: "relic", bonus: { speed: 3, attack: 1 } }
+];
+
+const SLOT_DISPLAY_NAMES = {
+    weapon: "武器",
+    armor: "護甲",
+    relic: "飾品"
+};
+
 // ===== 遊戲狀態（集中管理，避免散落） =====
 const gameState = {
     // mode: "addSub" = 加減法, "multiply" = 九九乘法
@@ -143,7 +204,18 @@ const gameState = {
     autoNextEnabled: true,
     soundEnabled: true,
     bgmEnabled: true,
-    unlockedBadgeIds: new Set()
+    unlockedBadgeIds: new Set(),
+    turn: "player",
+    enemyStageIndex: 0,
+    currentEnemy: ENEMY_STAGES[0],
+    enemyHp: ENEMY_STAGES[0].maxHp,
+    playerStats: { ...BASE_PLAYER_STATS },
+    playerHp: BASE_PLAYER_STATS.maxHp,
+    equipped: {
+        weapon: null,
+        armor: null,
+        relic: null
+    }
 };
 
 let leaderboardData = [];
@@ -439,8 +511,9 @@ function getCurrentStoryChapter() {
  */
 function renderStory() {
     const { chapter, chapterIndex } = getCurrentStoryChapter();
+    const enemy = gameState.currentEnemy;
     storyTitleText.textContent = chapter.title;
-    storyDescText.textContent = chapter.description;
+    storyDescText.textContent = `${chapter.description} ${enemy.narrative}`;
 
     const nextChapter = STORY_CHAPTERS[chapterIndex + 1];
     if (!nextChapter) {
@@ -449,7 +522,233 @@ function renderStory() {
     }
 
     const remaining = Math.max(0, nextChapter.minCorrect - gameState.totalCorrect);
-    storyProgressText.textContent = `任務進度：再答對 ${remaining} 題可前往${nextChapter.title.replace("：", " ")}`;
+    storyProgressText.textContent = `任務進度：再答對 ${remaining} 題可前往${nextChapter.title.replace("：", " ")}，目前對戰 ${enemy.name}`;
+}
+
+/**
+ * 根據總答對數，決定目前敵人章節索引。
+ */
+function getEnemyStageIndexByProgress() {
+    if (gameState.totalCorrect >= 24) {
+        return 3;
+    }
+    if (gameState.totalCorrect >= 15) {
+        return 2;
+    }
+    if (gameState.totalCorrect >= 9) {
+        return 1;
+    }
+    return 0;
+}
+
+/**
+ * 計算角色最終數值（基礎 + 裝備加成）。
+ */
+function calculatePlayerStats() {
+    const stats = { ...BASE_PLAYER_STATS };
+    Object.values(gameState.equipped).forEach((itemId) => {
+        if (!itemId) {
+            return;
+        }
+        const item = EQUIPMENT_ITEMS.find((equipment) => equipment.id === itemId);
+        if (!item) {
+            return;
+        }
+        stats.attack += item.bonus.attack || 0;
+        stats.defense += item.bonus.defense || 0;
+        stats.maxHp += item.bonus.maxHp || 0;
+        stats.speed += item.bonus.speed || 0;
+    });
+    return stats;
+}
+
+/**
+ * 將拖曳中的裝備放到裝備欄，並套用數值變化。
+ */
+function equipItem(itemId, targetSlot) {
+    const item = EQUIPMENT_ITEMS.find((equipment) => equipment.id === itemId);
+    if (!item) {
+        return false;
+    }
+    if (item.slot !== targetSlot) {
+        feedbackText.textContent = `這件裝備只能放在「${SLOT_DISPLAY_NAMES[item.slot]}欄」。`;
+        return false;
+    }
+
+    gameState.equipped[targetSlot] = itemId;
+    gameState.playerStats = calculatePlayerStats();
+    if (gameState.playerHp > gameState.playerStats.maxHp) {
+        gameState.playerHp = gameState.playerStats.maxHp;
+    }
+    renderEquipment();
+    renderBattle();
+    feedbackText.textContent = `已裝備 ${item.icon}${item.name}，角色數值已更新！`;
+    return true;
+}
+
+/**
+ * 卸下指定欄位裝備。
+ */
+function unequipSlot(slotName) {
+    if (!gameState.equipped[slotName]) {
+        return;
+    }
+    gameState.equipped[slotName] = null;
+    gameState.playerStats = calculatePlayerStats();
+    if (gameState.playerHp > gameState.playerStats.maxHp) {
+        gameState.playerHp = gameState.playerStats.maxHp;
+    }
+    renderEquipment();
+    renderBattle();
+    feedbackText.textContent = "已卸下裝備。";
+}
+
+/**
+ * 將回合狀態渲染到畫面。
+ */
+function renderTurn() {
+    turnIndicatorText.textContent = gameState.turn === "player" ? "回合狀態：玩家回合（請答題發動攻擊）" : "回合狀態：敵人回合（準備反擊）";
+}
+
+/**
+ * 渲染戰鬥畫面資訊（敵人名稱、HP、玩家 HP）。
+ */
+function renderBattle() {
+    const heroPercent = Math.max(0, (gameState.playerHp / gameState.playerStats.maxHp) * 100);
+    const enemyPercent = Math.max(0, (gameState.enemyHp / gameState.currentEnemy.maxHp) * 100);
+    heroHpFill.style.width = `${heroPercent}%`;
+    enemyHpFill.style.width = `${enemyPercent}%`;
+    heroHpText.textContent = `HP ${gameState.playerHp} / ${gameState.playerStats.maxHp}`;
+    enemyHpText.textContent = `HP ${gameState.enemyHp} / ${gameState.currentEnemy.maxHp}`;
+    enemyNameText.textContent = gameState.currentEnemy.name;
+    enemyAvatarText.textContent = gameState.currentEnemy.avatar;
+    renderTurn();
+}
+
+/**
+ * 渲染裝備區與最終數值。
+ */
+function renderEquipment() {
+    const equippedIds = new Set(Object.values(gameState.equipped).filter(Boolean));
+    const inventoryItems = EQUIPMENT_ITEMS.filter((item) => !equippedIds.has(item.id));
+
+    inventoryList.innerHTML = "";
+    inventoryItems.forEach((item) => {
+        const itemNode = document.createElement("div");
+        itemNode.className = "equip-item";
+        itemNode.draggable = true;
+        itemNode.dataset.itemId = item.id;
+        itemNode.textContent = `${item.icon} ${item.name}`;
+
+        const meta = document.createElement("small");
+        const bonusText = [
+            item.bonus.attack ? `攻+${item.bonus.attack}` : "",
+            item.bonus.defense ? `防+${item.bonus.defense}` : "",
+            item.bonus.maxHp ? `HP+${item.bonus.maxHp}` : "",
+            item.bonus.speed ? `速+${item.bonus.speed}` : ""
+        ].filter(Boolean).join(" / ");
+        meta.textContent = bonusText;
+        itemNode.appendChild(meta);
+        inventoryList.appendChild(itemNode);
+    });
+
+    const slotMap = {
+        weapon: slotWeapon,
+        armor: slotArmor,
+        relic: slotRelic
+    };
+    Object.entries(slotMap).forEach(([slotName, slotNode]) => {
+        const itemId = gameState.equipped[slotName];
+        slotNode.innerHTML = "";
+        if (!itemId) {
+            slotNode.textContent = `${SLOT_DISPLAY_NAMES[slotName]}欄`;
+            return;
+        }
+
+        const item = EQUIPMENT_ITEMS.find((equipment) => equipment.id === itemId);
+        if (!item) {
+            slotNode.textContent = "裝備異常，請重拖曳";
+            return;
+        }
+
+        const itemNode = document.createElement("div");
+        itemNode.className = "equip-item";
+        itemNode.draggable = true;
+        itemNode.dataset.itemId = item.id;
+        itemNode.dataset.fromSlot = slotName;
+        itemNode.textContent = `${item.icon} ${item.name}`;
+        slotNode.appendChild(itemNode);
+    });
+
+    statAttackText.textContent = String(gameState.playerStats.attack);
+    statDefenseText.textContent = String(gameState.playerStats.defense);
+    statMaxHpText.textContent = String(gameState.playerStats.maxHp);
+    statSpeedText.textContent = String(gameState.playerStats.speed);
+}
+
+/**
+ * 切換敵人（依劇情進度更新）。
+ */
+function syncEnemyByProgress() {
+    const targetIndex = getEnemyStageIndexByProgress();
+    if (targetIndex !== gameState.enemyStageIndex && gameState.enemyHp <= 0) {
+        gameState.enemyStageIndex = targetIndex;
+        gameState.currentEnemy = ENEMY_STAGES[targetIndex];
+        gameState.enemyHp = gameState.currentEnemy.maxHp;
+        battleLogText.textContent = `新敵人登場：${gameState.currentEnemy.name}！`;
+    } else if (!gameState.currentEnemy) {
+        gameState.enemyStageIndex = targetIndex;
+        gameState.currentEnemy = ENEMY_STAGES[targetIndex];
+        gameState.enemyHp = gameState.currentEnemy.maxHp;
+    }
+}
+
+/**
+ * 播放攻擊與受擊動畫。
+ */
+function playBattleAnimation(attackerNode, targetNode) {
+    attackerNode.classList.remove("attacking");
+    targetNode.classList.remove("hit");
+    void attackerNode.offsetWidth;
+    attackerNode.classList.add("attacking");
+    targetNode.classList.add("hit");
+    window.setTimeout(() => {
+        attackerNode.classList.remove("attacking");
+        targetNode.classList.remove("hit");
+    }, 320);
+}
+
+/**
+ * 計算玩家本回合傷害：
+ * 基礎攻擊 + 隨機波動 + 等級補正，並套用最低傷害保底。
+ */
+function calculatePlayerDamage() {
+    return Math.max(
+        MIN_PLAYER_DAMAGE,
+        gameState.playerStats.attack + Math.floor(Math.random() * PLAYER_DAMAGE_RANDOM_VARIANCE) + getDisplayLevel()
+    );
+}
+
+/**
+ * 計算敵人反擊傷害：
+ * 敵人攻擊力 - 玩家防禦減傷 + 隨機波動，並套用最低傷害保底。
+ */
+function calculateEnemyDamage() {
+    return Math.max(
+        MIN_ENEMY_DAMAGE,
+        gameState.currentEnemy.attack - Math.floor(gameState.playerStats.defense / DEFENSE_REDUCTION_DIVISOR) + Math.floor(Math.random() * ENEMY_DAMAGE_RANDOM_VARIANCE)
+    );
+}
+
+/**
+ * 擊敗敵人後，計算下一個敵人章節索引。
+ * 會在「目前章節 + 1」與「依答對進度解鎖章節」之間取較大值，再限制到最大章節。
+ */
+function resolveNextEnemyStageIndex() {
+    const progressStageIndex = getEnemyStageIndexByProgress();
+    const advancedStageIndex = gameState.enemyStageIndex + 1;
+    const desiredStageIndex = Math.max(advancedStageIndex, progressStageIndex);
+    return Math.min(ENEMY_STAGES.length - 1, desiredStageIndex);
 }
 
 /**
@@ -702,12 +1001,14 @@ function generateAndShowQuestion() {
     }
 
     clearAutoNextTimer();
+    gameState.turn = "player";
     gameState.currentQuestion = createQuestionByMode();
     questionText.textContent = gameState.currentQuestion.text;
     answerInput.value = "";
     answerInput.focus();
     feedbackText.textContent = "請輸入答案後按「提交答案」。";
     renderStatus();
+    renderBattle();
 }
 
 /**
@@ -735,10 +1036,10 @@ function submitAnswer() {
     }
 
     const isCorrect = userAnswer === gameState.currentQuestion.answer;
+    const messageList = [];
 
     if (isCorrect) {
         const previousLevel = getDisplayLevel();
-        const messageList = [];
 
         gameState.score += SCORE_REWARD;
         gameState.streak += 1;
@@ -758,13 +1059,28 @@ function submitAnswer() {
             popStarAnimation();
         }
 
+        gameState.turn = "player";
+        playBattleAnimation(heroCard, enemyCard);
+        const playerDamage = calculatePlayerDamage();
+        gameState.enemyHp = Math.max(0, gameState.enemyHp - playerDamage);
+        battleLogText.textContent = `你造成 ${playerDamage} 點傷害！`;
+
         if (gameState.mode === "addSub" && currentLevel > previousLevel) {
             playLevelUpAnimation();
             playSoundEffect("levelUp");
             messageList.push(`🎉 升級成功！你來到等級 ${currentLevel}！`);
         } else {
             playSoundEffect("correct");
-            messageList.push("✅ 答對了！很棒，繼續挑戰下一題！");
+            messageList.push(`✅ 答對了！你對 ${gameState.currentEnemy.name} 造成 ${playerDamage} 點傷害！`);
+        }
+
+        if (gameState.enemyHp <= 0) {
+            messageList.push(`💥 你擊敗了 ${gameState.currentEnemy.name}！`);
+            gameState.enemyStageIndex = resolveNextEnemyStageIndex();
+            gameState.currentEnemy = ENEMY_STAGES[gameState.enemyStageIndex];
+            gameState.enemyHp = gameState.currentEnemy.maxHp;
+            battleLogText.textContent = `新敵人登場：${gameState.currentEnemy.name}！`;
+            messageList.push(`🆕 ${gameState.currentEnemy.name} 登場，準備下一輪對戰！`);
         }
 
         if (gotStar) {
@@ -781,12 +1097,35 @@ function submitAnswer() {
         gameState.score = Math.max(0, gameState.score - SCORE_PENALTY);
         gameState.streak = 0;
         gameState.totalWrong += 1;
+        gameState.turn = "enemy";
+        renderTurn();
+        playBattleAnimation(enemyCard, heroCard);
+
+        const enemyDamage = calculateEnemyDamage();
+        gameState.playerHp = Math.max(0, gameState.playerHp - enemyDamage);
+        battleLogText.textContent = `${gameState.currentEnemy.name} 反擊造成 ${enemyDamage} 點傷害！`;
+
         playSoundEffect("wrong");
-        feedbackText.textContent = `❌ 再試一次！正確答案是 ${gameState.currentQuestion.answer}`;
+        messageList.push(`❌ 答錯了！正確答案是 ${gameState.currentQuestion.answer}`);
+        messageList.push(`受到 ${enemyDamage} 點傷害。`);
+        if (gameState.playerHp <= 0) {
+            gameState.started = false;
+            clearAutoNextTimer();
+            messageList.push("☠️ 勇者倒下了，請按「開始遊戲」重新出發！");
+        }
+        feedbackText.textContent = messageList.join(" ");
+        window.setTimeout(() => {
+            if (gameState.playerHp > 0) {
+                gameState.turn = "player";
+                renderTurn();
+            }
+        }, TURN_SWITCH_DELAY_MS);
     }
 
+    syncEnemyByProgress();
     renderStatus();
     renderStory();
+    renderBattle();
     scheduleAutoNextQuestion();
 }
 
@@ -804,12 +1143,21 @@ function resetProgress() {
     gameState.totalWrong = 0;
     gameState.currentQuestion = null;
     gameState.started = false;
+    gameState.turn = "player";
+    gameState.enemyStageIndex = 0;
+    gameState.currentEnemy = ENEMY_STAGES[0];
+    gameState.enemyHp = gameState.currentEnemy.maxHp;
+    gameState.playerStats = calculatePlayerStats();
+    gameState.playerHp = gameState.playerStats.maxHp;
 
     questionText.textContent = "按下「開始遊戲」後會出題";
     answerInput.value = "";
     feedbackText.textContent = "進度已重設，準備好再開始！";
+    battleLogText.textContent = "戰鬥已重置，準備再次挑戰。";
     renderStatus();
     renderStory();
+    renderBattle();
+    renderEquipment();
 }
 
 /**
@@ -823,13 +1171,21 @@ function toggleMode() {
     gameState.streak = 0;
     gameState.currentQuestion = null;
     gameState.started = false;
+    gameState.turn = "player";
+    gameState.playerStats = calculatePlayerStats();
+    gameState.playerHp = gameState.playerStats.maxHp;
+    gameState.enemyStageIndex = getEnemyStageIndexByProgress();
+    gameState.currentEnemy = ENEMY_STAGES[gameState.enemyStageIndex];
+    gameState.enemyHp = gameState.currentEnemy.maxHp;
 
     questionText.textContent = "模式已切換，按下「開始遊戲」開始新挑戰";
     answerInput.value = "";
     feedbackText.textContent = "新模式準備完成！";
+    battleLogText.textContent = `目前戰場：${gameState.currentEnemy.name}`;
     renderMode();
     renderStatus();
     renderStory();
+    renderBattle();
 }
 
 /**
@@ -908,6 +1264,77 @@ function setupTouchKeypad() {
 }
 
 /**
+ * 初始化裝備拖曳互動。
+ */
+function setupEquipmentDragDrop() {
+    const dropZones = [inventoryList, slotWeapon, slotArmor, slotRelic];
+
+    document.addEventListener("dragstart", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement) || !target.classList.contains("equip-item")) {
+            return;
+        }
+
+        const payload = {
+            itemId: target.dataset.itemId || "",
+            fromSlot: target.dataset.fromSlot || ""
+        };
+        event.dataTransfer?.setData("text/plain", JSON.stringify(payload));
+    });
+
+    dropZones.forEach((zone) => {
+        zone.addEventListener("dragover", (event) => {
+            event.preventDefault();
+            zone.classList.add("drag-over");
+        });
+
+        zone.addEventListener("dragleave", () => {
+            zone.classList.remove("drag-over");
+        });
+
+        zone.addEventListener("drop", (event) => {
+            event.preventDefault();
+            zone.classList.remove("drag-over");
+            const raw = event.dataTransfer?.getData("text/plain");
+            if (!raw) {
+                return;
+            }
+
+            let payload;
+            try {
+                payload = JSON.parse(raw);
+            } catch (error) {
+                return;
+            }
+
+            const itemId = typeof payload.itemId === "string" ? payload.itemId : "";
+            const fromSlot = typeof payload.fromSlot === "string" ? payload.fromSlot : "";
+
+            if (!itemId) {
+                return;
+            }
+
+            if (zone === inventoryList) {
+                if (fromSlot) {
+                    unequipSlot(fromSlot);
+                }
+                return;
+            }
+
+            const targetSlot = zone.dataset.slot;
+            if (!targetSlot) {
+                return;
+            }
+            if (fromSlot === targetSlot) {
+                feedbackText.textContent = `這件裝備已在「${SLOT_DISPLAY_NAMES[targetSlot]}欄」。`;
+                return;
+            }
+            equipItem(itemId, targetSlot);
+        });
+    });
+}
+
+/**
  * 開始遊戲。
  */
 function startGame() {
@@ -916,8 +1343,21 @@ function startGame() {
         startBgmLoop();
     }
 
+    gameState.playerStats = calculatePlayerStats();
+    if (gameState.playerHp <= 0 || gameState.playerHp > gameState.playerStats.maxHp) {
+        gameState.playerHp = gameState.playerStats.maxHp;
+    }
+    if (gameState.enemyHp <= 0) {
+        gameState.enemyStageIndex = getEnemyStageIndexByProgress();
+        gameState.currentEnemy = ENEMY_STAGES[gameState.enemyStageIndex];
+        gameState.enemyHp = gameState.currentEnemy.maxHp;
+    }
+    gameState.turn = "player";
     gameState.started = true;
     feedbackText.textContent = "遊戲開始！加油！";
+    battleLogText.textContent = `遭遇 ${gameState.currentEnemy.name}，請開始答題攻擊！`;
+    renderEquipment();
+    renderBattle();
     generateAndShowQuestion();
 }
 
@@ -949,12 +1389,20 @@ playerNameInput.addEventListener("keydown", (event) => {
 // ===== 初始渲染 =====
 leaderboardData = loadLeaderboard();
 loadBadgeProgress();
+gameState.playerStats = calculatePlayerStats();
+gameState.playerHp = gameState.playerStats.maxHp;
+gameState.enemyStageIndex = getEnemyStageIndexByProgress();
+gameState.currentEnemy = ENEMY_STAGES[gameState.enemyStageIndex];
+gameState.enemyHp = gameState.currentEnemy.maxHp;
 renderMode();
 renderSoundButton();
 renderBgmButton();
 renderAutoNextButton();
 renderStatus();
 renderStory();
+renderBattle();
+renderEquipment();
 renderBadges();
 renderLeaderboard();
 setupTouchKeypad();
+setupEquipmentDragDrop();

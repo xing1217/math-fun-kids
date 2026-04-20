@@ -26,6 +26,55 @@
                 <p>星星：<span id="stars">0</span> ⭐</p>
             </div>
 
+            <div id="battle-panel" class="panel">
+                <h2>⚔️ 回合制戰鬥</h2>
+                <p id="turn-indicator">回合狀態：等待開始</p>
+                <div class="battlefield">
+                    <article id="hero-card" class="fighter-card hero">
+                        <p class="fighter-name">🧑‍🚀 數學勇者</p>
+                        <p class="fighter-avatar">🛡️</p>
+                        <div class="hp-wrap">
+                            <div class="hp-bar"><span id="hero-hp-fill"></span></div>
+                            <p id="hero-hp-text">HP 100 / 100</p>
+                        </div>
+                    </article>
+                    <article id="enemy-card" class="fighter-card enemy">
+                        <p id="enemy-name" class="fighter-name">👾 練習靶怪</p>
+                        <p id="enemy-avatar" class="fighter-avatar">👾</p>
+                        <div class="hp-wrap">
+                            <div class="hp-bar enemy"><span id="enemy-hp-fill"></span></div>
+                            <p id="enemy-hp-text">HP 60 / 60</p>
+                        </div>
+                    </article>
+                </div>
+                <p id="battle-log">答對題目會攻擊敵人；答錯會被敵人反擊！</p>
+            </div>
+
+            <div id="equipment-panel" class="panel">
+                <h2>🎒 裝備與角色數值（可拖曳）</h2>
+                <p id="equip-help">把裝備從背包拖到對應欄位，數值會即時變化。</p>
+                <div class="equipment-layout">
+                    <div>
+                        <p class="equip-title">背包</p>
+                        <div id="inventory-list" class="equip-grid drop-zone" aria-label="背包區"></div>
+                    </div>
+                    <div>
+                        <p class="equip-title">裝備欄</p>
+                        <div class="slot-grid">
+                            <div id="slot-weapon" class="equip-slot drop-zone" data-slot="weapon">武器欄</div>
+                            <div id="slot-armor" class="equip-slot drop-zone" data-slot="armor">護甲欄</div>
+                            <div id="slot-relic" class="equip-slot drop-zone" data-slot="relic">飾品欄</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="stats-panel" class="stats-panel">
+                    <p>⚔️ 攻擊：<span id="stat-attack">10</span></p>
+                    <p>🛡️ 防禦：<span id="stat-defense">3</span></p>
+                    <p>💖 最大 HP：<span id="stat-max-hp">100</span></p>
+                    <p>💨 速度：<span id="stat-speed">5</span></p>
+                </div>
+            </div>
+
             <div id="story-panel" class="panel">
                 <h2>🗺️ RPG 冒險劇情</h2>
                 <p id="story-title">序章：新手村出發</p>
