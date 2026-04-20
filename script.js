@@ -24,6 +24,10 @@ const answerInput = document.getElementById("answer");
 const submitButton = document.getElementById("submit-answer");
 const feedbackText = document.getElementById("feedback");
 
+// ===== 可調整的遊戲規則常數 =====
+const SCORE_REWARD = 10;
+const SCORE_PENALTY = 2;
+
 // ===== 遊戲狀態（集中管理，避免散落） =====
 const gameState = {
     // mode: "addSub" = 加減法, "multiply" = 九九乘法
@@ -174,17 +178,21 @@ function submitAnswer() {
     }
 
     const userAnswer = Number(answerInput.value);
+    if (Number.isNaN(userAnswer)) {
+        feedbackText.textContent = "請輸入有效的數字！";
+        return;
+    }
     const isCorrect = userAnswer === gameState.currentQuestion.answer;
 
     if (isCorrect) {
-        gameState.score += 10;
+        gameState.score += SCORE_REWARD;
         gameState.streak += 1;
         if (gameState.mode === "addSub") {
             gameState.addSubCorrectCount += 1;
         }
         feedbackText.textContent = "✅ 答對了！很棒，繼續挑戰下一題！";
     } else {
-        gameState.score = Math.max(0, gameState.score - 2);
+        gameState.score = Math.max(0, gameState.score - SCORE_PENALTY);
         gameState.streak = 0;
         feedbackText.textContent = `❌ 再試一次！正確答案是 ${gameState.currentQuestion.answer}`;
     }
