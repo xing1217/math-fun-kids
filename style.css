@@ -487,6 +487,7 @@ input {
 
 @media (max-width: 620px) {
     .container {
+        padding-bottom: 24px;
         padding-bottom: calc(24px + env(safe-area-inset-bottom));
     }
 

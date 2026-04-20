@@ -1035,7 +1035,7 @@ function generateAndShowQuestion() {
     questionText.textContent = gameState.currentQuestion.text;
     answerInput.value = "";
     answerInput.focus();
-    requestAnimationFrame(ensureQuestionAreaVisible);
+    setTimeout(ensureQuestionAreaVisible, INPUT_FOCUS_SCROLL_DELAY_MS);
     feedbackText.textContent = "請輸入答案後按「提交答案」。";
     renderStatus();
     renderBattle();
