@@ -89,6 +89,7 @@ button {
     cursor: pointer;
     font-weight: 700;
     background: #eff6ff;
+    touch-action: manipulation;
 }
 
 button:hover {
@@ -108,6 +109,36 @@ input {
     margin: 0;
     font-weight: 700;
     color: #166534;
+}
+
+#story-title {
+    margin: 0 0 8px;
+    font-weight: 800;
+    color: #7c2d12;
+}
+
+#story-desc,
+#story-progress {
+    margin: 0 0 6px;
+    color: #334155;
+    font-weight: 600;
+}
+
+#story-progress {
+    margin-bottom: 0;
+}
+
+.touch-keypad {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(64px, 1fr));
+    gap: 8px;
+    max-width: 280px;
+}
+
+.touch-keypad button {
+    min-height: 46px;
+    font-size: 1.02rem;
 }
 
 #badge-hint,
