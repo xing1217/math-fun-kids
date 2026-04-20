@@ -14,6 +14,7 @@
         <section id="game">
             <div class="toolbar">
                 <button id="switch-mode">切換到九九乘法</button>
+                <button id="toggle-sound">🔊 音效：開</button>
                 <p class="mode-info">目前模式：<span id="mode-label">加減法闖關（1~3 位數）</span></p>
             </div>
 
@@ -21,6 +22,7 @@
                 <p>分數：<span id="score">0</span></p>
                 <p>等級：<span id="level">1</span></p>
                 <p>連續答對：<span id="streak">0</span></p>
+                <p>星星：<span id="stars">0</span> ⭐</p>
             </div>
 
             <div class="actions">
@@ -38,6 +40,8 @@
             <div id="feedback-area" class="panel feedback">
                 <p id="feedback">準備好就開始挑戰吧！</p>
             </div>
+
+            <div id="fx-layer" aria-hidden="true"></div>
         </section>
     </main>
 

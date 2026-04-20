@@ -12,10 +12,12 @@
 
 // ===== 取得畫面元件 =====
 const switchModeButton = document.getElementById("switch-mode");
+const toggleSoundButton = document.getElementById("toggle-sound");
 const modeLabel = document.getElementById("mode-label");
 const scoreText = document.getElementById("score");
 const levelText = document.getElementById("level");
 const streakText = document.getElementById("streak");
+const starsText = document.getElementById("stars");
 const startButton = document.getElementById("start-game");
 const nextButton = document.getElementById("next-question");
 const resetButton = document.getElementById("reset");
@@ -23,12 +25,15 @@ const questionText = document.getElementById("question");
 const answerInput = document.getElementById("answer");
 const submitButton = document.getElementById("submit-answer");
 const feedbackText = document.getElementById("feedback");
+const fxLayer = document.getElementById("fx-layer");
 
 // ===== 可調整的遊戲規則常數 =====
 // 答對時加分分數（建議維持正整數）
 const SCORE_REWARD = 10;
 // 答錯時扣分分數（建議維持正整數，且小於答對加分）
 const SCORE_PENALTY = 2;
+// 每連續答對幾題可獲得 1 顆星星
+const STAR_STREAK_REQUIREMENT = 3;
 
 // ===== 遊戲狀態（集中管理，避免散落） =====
 const gameState = {
@@ -36,11 +41,86 @@ const gameState = {
     mode: "addSub",
     score: 0,
     streak: 0,
+    stars: 0,
     // addSubCorrectCount 用來驅動加減法難度升級
     addSubCorrectCount: 0,
     currentQuestion: null,
-    started: false
+    started: false,
+    soundEnabled: true
 };
+
+// ===== 音效系統（使用 Web Audio，無需外部音檔） =====
+let audioContext = null;
+
+/**
+ * 在首次互動後初始化 AudioContext。
+ * 這樣可以避免瀏覽器自動播放限制導致音效被擋下。
+ */
+function initAudioContext() {
+    if (audioContext) {
+        return;
+    }
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) {
+        return;
+    }
+    audioContext = new AudioContextClass();
+}
+
+/**
+ * 播放單一音符（很短的提示音）
+ */
+function playTone(frequency, durationSec, type = "sine", delaySec = 0) {
+    if (!gameState.soundEnabled || !audioContext) {
+        return;
+    }
+
+    const startAt = audioContext.currentTime + delaySec;
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.value = frequency;
+    gainNode.gain.setValueAtTime(0.0001, startAt);
+    gainNode.gain.exponentialRampToValueAtTime(0.12, startAt + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, startAt + durationSec);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    oscillator.start(startAt);
+    oscillator.stop(startAt + durationSec);
+}
+
+/**
+ * 播放遊戲事件音效
+ * - correct：答對
+ * - wrong：答錯
+ * - levelUp：升級
+ */
+function playSoundEffect(effectType) {
+    if (!gameState.soundEnabled || !audioContext) {
+        return;
+    }
+
+    if (effectType === "correct") {
+        playTone(660, 0.12, "triangle");
+        playTone(880, 0.16, "triangle", 0.08);
+        return;
+    }
+
+    if (effectType === "wrong") {
+        playTone(220, 0.18, "sawtooth");
+        playTone(165, 0.2, "sawtooth", 0.09);
+        return;
+    }
+
+    if (effectType === "levelUp") {
+        playTone(523.25, 0.12, "square");
+        playTone(659.25, 0.12, "square", 0.08);
+        playTone(783.99, 0.2, "square", 0.16);
+    }
+}
 
 /**
  * 根據答對題數決定加減法等級
@@ -131,6 +211,7 @@ function renderStatus() {
     scoreText.textContent = String(gameState.score);
     levelText.textContent = String(getDisplayLevel());
     streakText.textContent = String(gameState.streak);
+    starsText.textContent = String(gameState.stars);
 }
 
 /**
@@ -144,6 +225,49 @@ function renderMode() {
         modeLabel.textContent = "九九乘法練習（1~9）";
         switchModeButton.textContent = "切換到加減法闖關";
     }
+}
+
+/**
+ * 更新音效開關按鈕文案
+ */
+function renderSoundButton() {
+    toggleSoundButton.textContent = gameState.soundEnabled ? "🔊 音效：開" : "🔈 音效：關";
+}
+
+/**
+ * 顯示星星爆發小動畫，增強獎勵感
+ */
+function popStarAnimation() {
+    const vectors = [
+        { x: "-80px", y: "-30px" },
+        { x: "-25px", y: "-65px" },
+        { x: "35px", y: "-60px" },
+        { x: "90px", y: "-28px" }
+    ];
+
+    vectors.forEach((vector) => {
+        const star = document.createElement("span");
+        star.className = "pop-star";
+        star.textContent = "⭐";
+        star.style.left = "50%";
+        star.style.top = "-8px";
+        star.style.setProperty("--x", vector.x);
+        star.style.setProperty("--y", vector.y);
+        fxLayer.appendChild(star);
+        star.addEventListener("animationend", () => {
+            star.remove();
+        });
+    });
+}
+
+/**
+ * 升級時讓等級數字閃動，讓孩子感受到「闖關成功」
+ */
+function playLevelUpAnimation() {
+    levelText.classList.remove("level-up-flash");
+    // 觸發重排，確保同一個 class 可重複播放動畫
+    void levelText.offsetWidth;
+    levelText.classList.add("level-up-flash");
 }
 
 /**
@@ -191,15 +315,36 @@ function submitAnswer() {
     const isCorrect = userAnswer === gameState.currentQuestion.answer;
 
     if (isCorrect) {
+        const previousLevel = getDisplayLevel();
         gameState.score += SCORE_REWARD;
         gameState.streak += 1;
         if (gameState.mode === "addSub") {
             gameState.addSubCorrectCount += 1;
         }
-        feedbackText.textContent = "✅ 答對了！很棒，繼續挑戰下一題！";
+        const currentLevel = getDisplayLevel();
+
+        // 每連續答對 STAR_STREAK_REQUIREMENT 題給 1 顆星星
+        if (gameState.streak % STAR_STREAK_REQUIREMENT === 0) {
+            gameState.stars += 1;
+            popStarAnimation();
+        }
+
+        if (gameState.mode === "addSub" && currentLevel > previousLevel) {
+            playLevelUpAnimation();
+            playSoundEffect("levelUp");
+            feedbackText.textContent = `🎉 升級成功！你來到等級 ${currentLevel}！`;
+        } else {
+            playSoundEffect("correct");
+            feedbackText.textContent = "✅ 答對了！很棒，繼續挑戰下一題！";
+        }
+
+        if (gameState.streak % STAR_STREAK_REQUIREMENT === 0) {
+            feedbackText.textContent += " 獲得 1 顆星星⭐";
+        }
     } else {
         gameState.score = Math.max(0, gameState.score - SCORE_PENALTY);
         gameState.streak = 0;
+        playSoundEffect("wrong");
         feedbackText.textContent = `❌ 再試一次！正確答案是 ${gameState.currentQuestion.answer}`;
     }
 
@@ -212,6 +357,7 @@ function submitAnswer() {
 function resetProgress() {
     gameState.score = 0;
     gameState.streak = 0;
+    gameState.stars = 0;
     gameState.addSubCorrectCount = 0;
     gameState.currentQuestion = null;
     gameState.started = false;
@@ -241,9 +387,21 @@ function toggleMode() {
 }
 
 /**
+ * 切換音效開關
+ */
+function toggleSound() {
+    // 若使用者開啟音效，先嘗試初始化音效系統
+    initAudioContext();
+    gameState.soundEnabled = !gameState.soundEnabled;
+    renderSoundButton();
+    feedbackText.textContent = gameState.soundEnabled ? "音效已開啟 🔊" : "音效已關閉 🔈";
+}
+
+/**
  * 開始遊戲
  */
 function startGame() {
+    initAudioContext();
     gameState.started = true;
     feedbackText.textContent = "遊戲開始！加油！";
     generateAndShowQuestion();
@@ -251,6 +409,7 @@ function startGame() {
 
 // ===== 事件綁定 =====
 switchModeButton.addEventListener("click", toggleMode);
+toggleSoundButton.addEventListener("click", toggleSound);
 startButton.addEventListener("click", startGame);
 nextButton.addEventListener("click", generateAndShowQuestion);
 submitButton.addEventListener("click", submitAnswer);
@@ -265,4 +424,5 @@ answerInput.addEventListener("keydown", (event) => {
 
 // ===== 初始渲染 =====
 renderMode();
+renderSoundButton();
 renderStatus();
