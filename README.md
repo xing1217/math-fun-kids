@@ -120,13 +120,25 @@ math-fun-kids/
 
 ---
 
-## 🛠 GitHub Pages 設定說明（首次需手動啟用一次）
+## 🛠 首次設定步驟
+
+### 步驟一：啟用 GitHub Pages（只需做一次）
 
 1. 前往 GitHub 專案頁面，點選上方的 **Settings**
 2. 左側選單點選 **Pages**
 3. 在 **Source** 下拉選單選擇 **GitHub Actions**
-4. 儲存後，推送至 `main` 分支即可自動部署
+4. 儲存後，合併 PR 至 `main` 分支即會自動部署
 5. 部署完成後即可用以下網址遊玩：
 
 👉 **[https://xing1217.github.io/math-fun-kids/](https://xing1217.github.io/math-fun-kids/)**
+
+### 步驟二：建立 v1.0 Release（只需做一次）
+
+合併 PR 至 `main` 後，執行以下步驟建立正式 Release：
+
+1. 前往 GitHub 專案頁面，點選上方的 **Actions**
+2. 在左側找到「**建立 Release**」工作流程
+3. 點選右側的 **Run workflow**
+4. 在 `版本號碼` 欄位填入 `v1.0`，點選綠色的 **Run workflow** 按鈕
+5. 等待完成後，到 **Releases** 頁面就會看到 v1.0，內含可直接遊玩的網址
 
