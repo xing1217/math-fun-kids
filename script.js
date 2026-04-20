@@ -25,7 +25,9 @@ const submitButton = document.getElementById("submit-answer");
 const feedbackText = document.getElementById("feedback");
 
 // ===== 可調整的遊戲規則常數 =====
+// 答對時加分分數（建議維持正整數）
 const SCORE_REWARD = 10;
+// 答錯時扣分分數（建議維持正整數，且小於答對加分）
 const SCORE_PENALTY = 2;
 
 // ===== 遊戲狀態（集中管理，避免散落） =====
@@ -180,6 +182,10 @@ function submitAnswer() {
     const userAnswer = Number(answerInput.value);
     if (Number.isNaN(userAnswer)) {
         feedbackText.textContent = "請輸入有效的數字！";
+        return;
+    }
+    if (!Number.isInteger(userAnswer)) {
+        feedbackText.textContent = "請輸入整數答案（不能有小數）！";
         return;
     }
     const isCorrect = userAnswer === gameState.currentQuestion.answer;
