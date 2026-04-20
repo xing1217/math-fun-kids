@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數學遊戲</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>國小數學遊戲</h1>
+    <div id="game">
+        <button id="switch-mode">切換模式</button>
+        <div id="score-board">
+            <p>分數: <span id="score">0</span></p>
+            <p>等級: <span id="level">1</span></p>
+            <p>連續答對: <span id="streak">0</span></p>
+        </div>
+        <button id="start-game">開始遊戲</button>
+        <div id="question-area">
+            <p id="question">題目會出現在這裡</p>
+            <input type="text" id="answer" placeholder="請輸入答案">
+            <button id="submit-answer">提交答案</button>
+            <button id="next-question">下一題</button>
+            <button id="reset">重設進度</button>
+        </div>
+        <div id="feedback-area">
+            <p id="feedback">這裡會顯示回饋訊息</p>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
