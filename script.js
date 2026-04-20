@@ -165,8 +165,8 @@ function generateAndShowQuestion() {
 
 /**
  * 檢查作答結果並更新狀態
- * - 答對：分數 +10、連續答對 +1
- * - 答錯：分數 -2（最低不低於 0）、連續答對歸零
+ * - 答對：分數 +SCORE_REWARD、連續答對 +1
+ * - 答錯：分數 -SCORE_PENALTY（最低不低於 0）、連續答對歸零
  */
 function submitAnswer() {
     if (!gameState.started || !gameState.currentQuestion) {
