@@ -18,7 +18,7 @@ body {
 .container {
     width: min(1280px, 100%);
     margin: 0 auto;
-    padding: 24px clamp(12px, 2.5vw, 32px) clamp(32px, 4vh, 40px);
+    padding: 24px clamp(12px, 2.5vw, 32px) clamp(32px, 4vh, 40px) clamp(12px, 2.5vw, 32px);
 }
 
 h1 {
@@ -487,6 +487,7 @@ input {
 
 @media (max-width: 620px) {
     .container {
+        /* 先給固定值，再用 env() 疊加安全區，作為不支援 env() 的回退寫法 */
         padding-bottom: 24px;
         padding-bottom: calc(24px + env(safe-area-inset-bottom));
     }
