@@ -28,11 +28,11 @@ const feedbackText = document.getElementById("feedback");
 const fxLayer = document.getElementById("fx-layer");
 
 // ===== 可調整的遊戲規則常數 =====
-// 答對時加分分數（建議維持正整數）
+/** 答對時加分分數（建議維持正整數） */
 const SCORE_REWARD = 10;
-// 答錯時扣分分數（建議維持正整數，且小於答對加分）
+/** 答錯時扣分分數（建議維持正整數，且小於答對加分） */
 const SCORE_PENALTY = 2;
-// 每連續答對幾題可獲得 1 顆星星
+/** 每連續答對幾題可獲得 1 顆星星 */
 const STAR_STREAK_REQUIREMENT = 3;
 
 // ===== 遊戲狀態（集中管理，避免散落） =====
