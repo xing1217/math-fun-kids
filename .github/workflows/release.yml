@@ -1,0 +1,52 @@
+name: 建立 Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 取得原始碼
+        uses: actions/checkout@v4
+
+      - name: 建立 GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `數學冒險樂園 ${tag}`,
+              body: [
+                '## 🎮 數學冒險樂園 ' + tag,
+                '',
+                '### ▶️ 立即線上遊玩',
+                '',
+                '👉 **[點此開始玩 → https://xing1217.github.io/math-fun-kids/](https://xing1217.github.io/math-fun-kids/)**',
+                '',
+                '---',
+                '',
+                '### 🌟 本版本功能',
+                '',
+                '- 加減法闖關（1～3 位數，自動升等）',
+                '- 九九乘法練習',
+                '- 背景音樂（BGM）與音效開關',
+                '- 成就徽章系統（6 枚）',
+                '- 本機排行榜（localStorage，前 5 名）',
+                '- 全程正體中文介面',
+                '',
+                '---',
+                '',
+                '> 無須安裝，點開網址即可直接遊玩！',
+              ].join('\n'),
+              draft: false,
+              prerelease: false,
+            });

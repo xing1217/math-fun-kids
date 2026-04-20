@@ -1,7 +1,11 @@
 # 數學冒險樂園（math-fun-kids）
 
 這是一個專為 **國小 1-3 年級**設計的網頁數學遊戲。  
-不需要安裝套件、不需要建置流程，**直接開啟 `index.html` 就可以玩**。
+不需要安裝套件、不需要建置流程，**點開網址就能直接玩**。
+
+## ▶️ 立即線上遊玩
+
+👉 **[https://xing1217.github.io/math-fun-kids/](https://xing1217.github.io/math-fun-kids/)**
 
 ---
 
@@ -68,17 +72,25 @@
 
 ---
 
-## 🚀 遊戲完成後，我要怎麼開起來玩？
+## 🚀 怎麼開起來玩？
 
-### 方式 A：直接開檔（最快）
+### 方式 A：線上直接玩（推薦）
 
-1. 進入專案資料夾
-2. 用瀏覽器開啟 `index.html`
+直接點下方網址，不需要安裝任何東西：
+
+👉 **[https://xing1217.github.io/math-fun-kids/](https://xing1217.github.io/math-fun-kids/)**
+
+### 方式 B：下載到本機後開啟
+
+1. 下載此專案的 ZIP 或 Clone 到本機
+2. 用瀏覽器開啟專案資料夾內的 `index.html`
 3. 按「開始遊戲」就能玩
 
-### 方式 B：使用本機伺服器（可選）
+> ⚠️ 在 GitHub 上直接點 `index.html` 會看到原始碼，請用上方網址或本機開啟。
 
-如果你想用網址方式開啟，也可以在專案目錄執行：
+### 方式 C：使用本機伺服器（可選）
+
+如果你想用網址方式在本機開啟，可以在專案目錄執行：
 
 ```bash
 python -m http.server 5500
@@ -96,20 +108,25 @@ http://localhost:5500
 
 ```text
 math-fun-kids/
-├─ index.html   # 遊戲頁面結構
-├─ style.css    # 遊戲畫面樣式
-├─ script.js    # 遊戲邏輯（含詳細正體中文註解）
-└─ README.md    # 專案說明文件
+├─ index.html                   # 遊戲頁面結構
+├─ style.css                    # 遊戲畫面樣式
+├─ script.js                    # 遊戲邏輯（含詳細正體中文註解）
+├─ .nojekyll                    # 告知 GitHub Pages 不使用 Jekyll
+├─ .github/workflows/
+│   ├─ deploy.yml               # 自動部署 GitHub Pages
+│   └─ release.yml              # 推送 tag 自動建立 Release
+└─ README.md                    # 專案說明文件
 ```
 
 ---
 
-## 🛠 GitHub Pages（可選）
+## 🛠 GitHub Pages 設定說明（首次需手動啟用一次）
 
-如果你要讓別人用網址直接玩：
+1. 前往 GitHub 專案頁面，點選上方的 **Settings**
+2. 左側選單點選 **Pages**
+3. 在 **Source** 下拉選單選擇 **GitHub Actions**
+4. 儲存後，推送至 `main` 分支即可自動部署
+5. 部署完成後即可用以下網址遊玩：
 
-1. 到 GitHub 專案頁面點選 **Settings**
-2. 進入 **Pages**
-3. Source 選擇分支（例如 `main`）與根目錄（`/root`）
-4. 儲存後等待部署完成
-5. 使用 GitHub 提供的網址即可遊玩
+👉 **[https://xing1217.github.io/math-fun-kids/](https://xing1217.github.io/math-fun-kids/)**
+
