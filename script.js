@@ -62,8 +62,10 @@ const SCORE_REWARD = 10;
 const SCORE_PENALTY = 2;
 /** 每連續答對幾題可獲得 1 顆星星 */
 const STAR_STREAK_REQUIREMENT = 3;
-/** 排行榜只保留前幾名 */
+/** 排行榜只保留前幾名（本機模式） */
 const LEADERBOARD_LIMIT = 5;
+/** 線上排行榜顯示前幾名 */
+const ONLINE_LEADERBOARD_LIMIT = 20;
 /** 自動下一題延遲毫秒 */
 const AUTO_NEXT_DELAY_MS = 900;
 /** 答案輸入框聚焦後，等待虛擬鍵盤動畫完成再調整可視區 */
@@ -83,7 +85,7 @@ const BADGES_STORAGE_KEY = "mathFunKidsBadgesV1";
 
 // ===== 線上排行榜（Firebase Realtime Database）設定 =====
 // 請將下方的空字串改成你的 Firebase 資料庫 URL（結尾不加斜線），例如：
-//   "https://YOUR-PROJECT-default-rtdb.firebaseio.com"
+//   "https://YOUR-PROJECT-default-rtdb.REGION.firebasedatabase.app"
 // 留空 "" 則退回使用本機 localStorage。
 const FIREBASE_DB_URL = "";
 
@@ -858,7 +860,8 @@ function saveLeaderboard() {
 }
 
 /**
- * 將一筆分數加入本機排行榜，排序後取前 LEADERBOARD_LIMIT 筆。
+ * 將一筆分數加入本機排行榜，排序後取前 LEADERBOARD_LIMIT 筆並更新 UI。
+ * @param {{ name: string, score: number, stars: number, modeLabel: string, timestamp: number }} entry
  */
 function saveToLocalLeaderboard(entry) {
     leaderboardData.push(entry);
@@ -888,7 +891,7 @@ function saveToLocalLeaderboard(entry) {
  */
 async function fetchLeaderboardOnline() {
     try {
-        const url = `${FIREBASE_DB_URL}/leaderboard.json?orderBy="score"&limitToLast=20`;
+        const url = `${FIREBASE_DB_URL}/leaderboard.json?orderBy="score"&limitToLast=${ONLINE_LEADERBOARD_LIMIT}`;
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -909,7 +912,7 @@ async function fetchLeaderboardOnline() {
                 }
                 return a.timestamp - b.timestamp;
             })
-            .slice(0, 20);
+            .slice(0, ONLINE_LEADERBOARD_LIMIT);
     } catch (error) {
         return null;
     }

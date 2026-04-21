@@ -88,7 +88,8 @@
 4. 點「建立資料庫」→ 選擇離玩家最近的地區 → 以「**測試模式**」啟動  
    （測試模式允許任何人讀寫，適合家庭小遊戲；日後可再收緊規則）
 5. 資料庫建立後，複製頁面上方的 URL，格式為：  
-   `https://YOUR-PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app`
+   `https://YOUR-PROJECT-default-rtdb.REGION.firebasedatabase.app`  
+   （`REGION` 依你選的地區而定，例如 `asia-southeast1`）
 
 #### 步驟二：設定索引（讓依分數排序正常運作）
 
@@ -115,10 +116,10 @@
 const FIREBASE_DB_URL = "";
 ```
 
-將空字串替換成你的資料庫 URL，例如：
+將空字串替換成你的資料庫 URL（`REGION` 替換為實際地區），例如：
 
 ```js
-const FIREBASE_DB_URL = "https://YOUR-PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app";
+const FIREBASE_DB_URL = "https://YOUR-PROJECT-default-rtdb.REGION.firebasedatabase.app";
 ```
 
 儲存後重新整理頁面，排行榜即會自動從 Firebase 載入，所有裝置都能看到同一份排名 🎉
