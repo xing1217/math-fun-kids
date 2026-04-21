@@ -7,6 +7,12 @@
     box-sizing: border-box;
 }
 
+:root {
+    --battle-panel-min-height: 320px;
+    --battle-panel-min-height-xl: 380px;
+    --fighter-avatar-size: clamp(2.8rem, 6vw, 4rem);
+}
+
 body {
     margin: 0;
     font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
@@ -162,7 +168,7 @@ input {
     background:
         linear-gradient(180deg, #e0f2fe 0 52%, #fef3c7 52% 100%);
     border-color: #0f172a;
-    min-height: 320px;
+    min-height: var(--battle-panel-min-height);
     padding: 14px;
 }
 
@@ -233,7 +239,7 @@ input {
 
 .fighter-avatar {
     margin: 0 0 8px;
-    font-size: clamp(2.8rem, 6vw, 4rem);
+    font-size: var(--fighter-avatar-size);
     line-height: 1;
     filter: drop-shadow(0 2px 0 #0f172a33);
 }
@@ -575,7 +581,7 @@ input {
     }
 
     #battle-panel {
-        min-height: 380px;
+        min-height: var(--battle-panel-min-height-xl);
     }
 }
 

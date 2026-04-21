@@ -79,10 +79,15 @@ const PLAYER_DAMAGE_RANDOM_VARIANCE = 5;
 const MIN_ENEMY_DAMAGE = 3;
 const DEFENSE_REDUCTION_DIVISOR = 2;
 const ENEMY_DAMAGE_RANDOM_VARIANCE = 4;
+/** 玩家暴擊機率（0~1） */
 const PLAYER_CRITICAL_CHANCE = 0.2;
+/** 玩家暴擊傷害倍率 */
 const PLAYER_CRITICAL_MULTIPLIER = 1.8;
+/** 敵人重擊機率（0~1） */
 const ENEMY_CRITICAL_CHANCE = 0.14;
+/** 敵人重擊傷害倍率 */
 const ENEMY_CRITICAL_MULTIPLIER = 1.6;
+const BATTLE_IMPACT_ANIMATION_MS = 260;
 
 // ===== localStorage Key =====
 const LEADERBOARD_STORAGE_KEY = "mathFunKidsLeaderboardV1";
@@ -731,6 +736,7 @@ function syncEnemyByProgress() {
 function playBattleAnimation(attackerNode, targetNode) {
     attackerNode.classList.remove("attacking");
     targetNode.classList.remove("hit");
+    // 強制 reflow，確保攻擊/受擊動畫可在連續命中時重新觸發。
     void attackerNode.offsetWidth;
     attackerNode.classList.add("attacking");
     targetNode.classList.add("hit");
@@ -748,11 +754,21 @@ function triggerBattleImpact() {
         return;
     }
     battlePanel.classList.remove("impact");
+    // 強制 reflow，確保每次都能重新觸發 impact 動畫。
     void battlePanel.offsetWidth;
     battlePanel.classList.add("impact");
     window.setTimeout(() => {
         battlePanel.classList.remove("impact");
-    }, 280);
+    }, BATTLE_IMPACT_ANIMATION_MS);
+}
+
+/**
+ * 套用暴擊機制並回傳最終傷害。
+ */
+function calculateDamageWithCritical(baseDamage, criticalChance, criticalMultiplier) {
+    const isCritical = Math.random() < criticalChance;
+    const damage = isCritical ? Math.round(baseDamage * criticalMultiplier) : baseDamage;
+    return { damage, isCritical };
 }
 
 /**
@@ -764,9 +780,7 @@ function calculatePlayerDamage() {
         MIN_PLAYER_DAMAGE,
         gameState.playerStats.attack + Math.floor(Math.random() * PLAYER_DAMAGE_RANDOM_VARIANCE) + getDisplayLevel()
     );
-    const isCritical = Math.random() < PLAYER_CRITICAL_CHANCE;
-    const damage = isCritical ? Math.round(baseDamage * PLAYER_CRITICAL_MULTIPLIER) : baseDamage;
-    return { damage, isCritical };
+    return calculateDamageWithCritical(baseDamage, PLAYER_CRITICAL_CHANCE, PLAYER_CRITICAL_MULTIPLIER);
 }
 
 /**
@@ -778,9 +792,7 @@ function calculateEnemyDamage() {
         MIN_ENEMY_DAMAGE,
         gameState.currentEnemy.attack - Math.floor(gameState.playerStats.defense / DEFENSE_REDUCTION_DIVISOR) + Math.floor(Math.random() * ENEMY_DAMAGE_RANDOM_VARIANCE)
     );
-    const isCritical = Math.random() < ENEMY_CRITICAL_CHANCE;
-    const damage = isCritical ? Math.round(baseDamage * ENEMY_CRITICAL_MULTIPLIER) : baseDamage;
-    return { damage, isCritical };
+    return calculateDamageWithCritical(baseDamage, ENEMY_CRITICAL_CHANCE, ENEMY_CRITICAL_MULTIPLIER);
 }
 
 /**
