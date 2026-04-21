@@ -19,7 +19,7 @@ body {
 }
 
 .container {
-    width: min(1160px, 100%);
+    width: min(1320px, 100%);
     margin: 0 auto;
     padding: clamp(12px, 2vh, 20px) clamp(10px, 2.2vw, 24px) clamp(16px, 2.5vh, 26px) clamp(10px, 2.2vw, 24px);
 }
@@ -71,15 +71,31 @@ h2 {
     box-shadow: inset 0 0 0 3px #dbeafe, 0 4px 0 #1e293b33;
 }
 
+#game > * {
+    min-width: 0;
+}
+
+.panel p,
+.mode-info,
+#leaderboard-list li,
+.badge-desc {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
 #score-board {
     display: grid;
-    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     gap: 8px;
 }
 
 #score-board p {
     margin: 0;
     font-weight: 700;
+    border: 2px solid #33415533;
+    border-radius: 8px;
+    padding: 6px 8px;
+    background: #ffffffcc;
 }
 
 #question {
@@ -146,12 +162,48 @@ input {
     background:
         linear-gradient(180deg, #e0f2fe 0 52%, #fef3c7 52% 100%);
     border-color: #0f172a;
+    min-height: 320px;
+    padding: 14px;
+}
+
+#battle-panel.player-turn {
+    box-shadow: inset 0 0 0 3px #93c5fd, 0 0 0 2px #1d4ed8;
+}
+
+#battle-panel.enemy-turn {
+    box-shadow: inset 0 0 0 3px #fda4af, 0 0 0 2px #be123c;
+}
+
+#battle-panel.impact {
+    animation: battle-impact 260ms ease;
 }
 
 .battlefield {
     display: grid;
-    grid-template-columns: repeat(2, minmax(160px, 1fr));
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
     gap: 12px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+    padding: 4px;
+}
+
+.battlefield::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    background:
+        radial-gradient(circle at 18% 30%, #ffffff99 0, #ffffff00 28%),
+        radial-gradient(circle at 82% 74%, #fef9c3cc 0, #fef9c300 30%);
+    background-size: 120% 120%;
+    background-position: 0% 50%;
+    animation: battlefield-flow 2.4s linear infinite;
+}
+
+.battlefield > * {
+    position: relative;
+    z-index: 1;
 }
 
 .fighter-card {
@@ -161,6 +213,7 @@ input {
     background: #ffffff;
     transition: transform 180ms ease;
     box-shadow: inset 0 0 0 2px #dbeafe;
+    min-height: 160px;
 }
 
 .fighter-card.hero {
@@ -180,7 +233,9 @@ input {
 
 .fighter-avatar {
     margin: 0 0 8px;
-    font-size: 2rem;
+    font-size: clamp(2.8rem, 6vw, 4rem);
+    line-height: 1;
+    filter: drop-shadow(0 2px 0 #0f172a33);
 }
 
 .hp-wrap p {
@@ -218,6 +273,7 @@ input {
     margin: 10px 0 0;
     font-weight: 700;
     color: #1e3a8a;
+    font-size: clamp(0.96rem, 1.8vw, 1.08rem);
 }
 
 #turn-indicator {
@@ -228,7 +284,7 @@ input {
 
 .equipment-layout {
     display: grid;
-    grid-template-columns: repeat(2, minmax(200px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
 }
 
@@ -239,7 +295,7 @@ input {
 
 .equip-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(90px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
 }
 
@@ -255,6 +311,9 @@ input {
     background: #f8fafc;
     padding: 8px;
     min-height: 58px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .equip-item {
@@ -319,6 +378,19 @@ input {
     100% { transform: translateX(0); }
 }
 
+@keyframes battlefield-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes battle-impact {
+    0% { transform: translateX(0) scale(1); }
+    25% { transform: translateX(-2px) scale(1.005); }
+    50% { transform: translateX(2px) scale(1.01); }
+    100% { transform: translateX(0) scale(1); }
+}
+
 .touch-keypad {
     margin-top: 10px;
     display: grid;
@@ -344,7 +416,7 @@ input {
     padding: 0;
     margin: 0;
     display: grid;
-    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
 }
 
@@ -489,14 +561,28 @@ input {
 
 @media (min-width: 1200px) {
     #game {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(360px, 1fr));
         grid-template-areas:
-            "actions actions actions"
-            "toolbar toolbar toolbar"
-            "score question feedback"
-            "battle question story"
-            "equipment badge leaderboard"
-            "equipment fx fx";
+            "actions actions"
+            "toolbar toolbar"
+            "score question"
+            "battle battle"
+            "equipment story"
+            "feedback feedback"
+            "badge leaderboard"
+            "fx fx";
+        gap: 12px;
+    }
+
+    #battle-panel {
+        min-height: 380px;
+    }
+}
+
+@media (max-width: 1100px) {
+    .equipment-layout,
+    .badge-list {
+        grid-template-columns: 1fr;
     }
 }
 

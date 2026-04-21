@@ -18,6 +18,7 @@ const streakText = document.getElementById("streak");
 const starsText = document.getElementById("stars");
 const turnIndicatorText = document.getElementById("turn-indicator");
 const battleLogText = document.getElementById("battle-log");
+const battlePanel = document.getElementById("battle-panel");
 const heroCard = document.getElementById("hero-card");
 const enemyCard = document.getElementById("enemy-card");
 const enemyNameText = document.getElementById("enemy-name");
@@ -78,6 +79,10 @@ const PLAYER_DAMAGE_RANDOM_VARIANCE = 5;
 const MIN_ENEMY_DAMAGE = 3;
 const DEFENSE_REDUCTION_DIVISOR = 2;
 const ENEMY_DAMAGE_RANDOM_VARIANCE = 4;
+const PLAYER_CRITICAL_CHANCE = 0.2;
+const PLAYER_CRITICAL_MULTIPLIER = 1.8;
+const ENEMY_CRITICAL_CHANCE = 0.14;
+const ENEMY_CRITICAL_MULTIPLIER = 1.6;
 
 // ===== localStorage Key =====
 const LEADERBOARD_STORAGE_KEY = "mathFunKidsLeaderboardV1";
@@ -621,6 +626,10 @@ function unequipSlot(slotName) {
  */
 function renderTurn() {
     turnIndicatorText.textContent = gameState.turn === "player" ? "回合狀態：玩家回合（請答題發動攻擊）" : "回合狀態：敵人回合（準備反擊）";
+    if (battlePanel) {
+        battlePanel.classList.toggle("player-turn", gameState.turn === "player");
+        battlePanel.classList.toggle("enemy-turn", gameState.turn === "enemy");
+    }
 }
 
 /**
@@ -732,14 +741,32 @@ function playBattleAnimation(attackerNode, targetNode) {
 }
 
 /**
+ * 戰鬥衝擊特效：讓戰鬥區短暫震動，提升打擊感。
+ */
+function triggerBattleImpact() {
+    if (!battlePanel) {
+        return;
+    }
+    battlePanel.classList.remove("impact");
+    void battlePanel.offsetWidth;
+    battlePanel.classList.add("impact");
+    window.setTimeout(() => {
+        battlePanel.classList.remove("impact");
+    }, 280);
+}
+
+/**
  * 計算玩家本回合傷害：
  * 基礎攻擊 + 隨機波動 + 等級補正，並套用最低傷害保底。
  */
 function calculatePlayerDamage() {
-    return Math.max(
+    const baseDamage = Math.max(
         MIN_PLAYER_DAMAGE,
         gameState.playerStats.attack + Math.floor(Math.random() * PLAYER_DAMAGE_RANDOM_VARIANCE) + getDisplayLevel()
     );
+    const isCritical = Math.random() < PLAYER_CRITICAL_CHANCE;
+    const damage = isCritical ? Math.round(baseDamage * PLAYER_CRITICAL_MULTIPLIER) : baseDamage;
+    return { damage, isCritical };
 }
 
 /**
@@ -747,10 +774,13 @@ function calculatePlayerDamage() {
  * 敵人攻擊力 - 玩家防禦減傷 + 隨機波動，並套用最低傷害保底。
  */
 function calculateEnemyDamage() {
-    return Math.max(
+    const baseDamage = Math.max(
         MIN_ENEMY_DAMAGE,
         gameState.currentEnemy.attack - Math.floor(gameState.playerStats.defense / DEFENSE_REDUCTION_DIVISOR) + Math.floor(Math.random() * ENEMY_DAMAGE_RANDOM_VARIANCE)
     );
+    const isCritical = Math.random() < ENEMY_CRITICAL_CHANCE;
+    const damage = isCritical ? Math.round(baseDamage * ENEMY_CRITICAL_MULTIPLIER) : baseDamage;
+    return { damage, isCritical };
 }
 
 /**
@@ -1189,9 +1219,10 @@ function submitAnswer() {
 
         gameState.turn = "player";
         playBattleAnimation(heroCard, enemyCard);
-        const playerDamage = calculatePlayerDamage();
+        const { damage: playerDamage, isCritical: playerCritical } = calculatePlayerDamage();
+        triggerBattleImpact();
         gameState.enemyHp = Math.max(0, gameState.enemyHp - playerDamage);
-        battleLogText.textContent = `你造成 ${playerDamage} 點傷害！`;
+        battleLogText.textContent = playerCritical ? `⚡ 暴擊！你造成 ${playerDamage} 點重創！` : `你造成 ${playerDamage} 點傷害！`;
 
         if (gameState.mode === "addSub" && currentLevel > previousLevel) {
             playLevelUpAnimation();
@@ -1199,7 +1230,9 @@ function submitAnswer() {
             messageList.push(`🎉 升級成功！你來到等級 ${currentLevel}！`);
         } else {
             playSoundEffect("correct");
-            messageList.push(`✅ 答對了！你對 ${gameState.currentEnemy.name} 造成 ${playerDamage} 點傷害！`);
+            messageList.push(playerCritical
+                ? `✅ 答對了！暴擊命中，對 ${gameState.currentEnemy.name} 造成 ${playerDamage} 點重創！`
+                : `✅ 答對了！你對 ${gameState.currentEnemy.name} 造成 ${playerDamage} 點傷害！`);
         }
 
         if (gameState.enemyHp <= 0) {
@@ -1229,13 +1262,16 @@ function submitAnswer() {
         renderTurn();
         playBattleAnimation(enemyCard, heroCard);
 
-        const enemyDamage = calculateEnemyDamage();
+        const { damage: enemyDamage, isCritical: enemyCritical } = calculateEnemyDamage();
+        triggerBattleImpact();
         gameState.playerHp = Math.max(0, gameState.playerHp - enemyDamage);
-        battleLogText.textContent = `${gameState.currentEnemy.name} 反擊造成 ${enemyDamage} 點傷害！`;
+        battleLogText.textContent = enemyCritical
+            ? `${gameState.currentEnemy.name} 使出重擊，造成 ${enemyDamage} 點傷害！`
+            : `${gameState.currentEnemy.name} 反擊造成 ${enemyDamage} 點傷害！`;
 
         playSoundEffect("wrong");
         messageList.push(`❌ 答錯了！正確答案是 ${question.answer}`);
-        messageList.push(`受到 ${enemyDamage} 點傷害。`);
+        messageList.push(enemyCritical ? `受到重擊 ${enemyDamage} 點傷害。` : `受到 ${enemyDamage} 點傷害。`);
         if (gameState.playerHp <= 0) {
             gameState.started = false;
             clearAutoNextTimer();
