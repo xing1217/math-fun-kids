@@ -30,7 +30,7 @@
 
 ## ✨ 功能特色
 
-- 兩種模式一鍵切換（加減法 / 九九乘法）
+- **兩種模式一鍵切換**（加減法 / 九九乘法）
 - **RPG 冒險劇情章節**（隨答對題數推進主線）
 - **回合制戰鬥系統**（答對攻擊、答錯受擊、敵人會換階段）
 - **角色 HP / 敵人 HP 即時條狀顯示**
@@ -42,7 +42,7 @@
 - **自動下一題**可開關，連續練習不間斷
 - **觸控數字鍵盤**，手機與平板可直接點按輸入
 - **成就徽章系統**（解鎖後會顯示）
-- **本機排行榜（localStorage）**，保留前 5 名
+- **線上排行榜**（設定 Firebase 後全裝置共享，未設定時退回本機儲存）
 - 錯題會立即顯示正確答案
 - 支援按 Enter 快速送出答案
 - 程式碼內含完整正體中文註解
@@ -73,12 +73,57 @@
 
 ---
 
-## 🏆 本機排行榜說明
+## 🏆 排行榜說明
 
-- 在排行榜區塊輸入玩家名稱後，點「儲存目前分數」即可記錄
-- 會儲存：玩家名稱、分數、星星、遊戲模式、日期
-- 排行榜資料儲存在 **同一台裝置的瀏覽器 localStorage**
-- 清除瀏覽器網站資料後，排行榜紀錄也會被清除
+排行榜預設使用 **本機 localStorage**（只有自己的裝置看得到）。
+若想讓所有玩家共用同一份線上排行榜，請依下方步驟設定 Firebase。
+
+### 啟用線上排行榜（Firebase Realtime Database）
+
+#### 步驟一：建立 Firebase 專案
+
+1. 前往 [Firebase Console](https://console.firebase.google.com/) 並以 Google 帳號登入
+2. 點選「新增專案」，填入專案名稱後完成建立
+3. 在專案總覽左側選單找到「建構」→「**Realtime Database**」
+4. 點「建立資料庫」→ 選擇離玩家最近的地區 → 以「**測試模式**」啟動  
+   （測試模式允許任何人讀寫，適合家庭小遊戲；日後可再收緊規則）
+5. 資料庫建立後，複製頁面上方的 URL，格式為：  
+   `https://YOUR-PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app`
+
+#### 步驟二：設定索引（讓依分數排序正常運作）
+
+在 Firebase Console 左側選單開啟 **Realtime Database → 規則（Rules）**，
+將內容替換為以下設定後點「發布」：
+
+```json
+{
+  "rules": {
+    "leaderboard": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["score"]
+    }
+  }
+}
+```
+
+#### 步驟三：將資料庫 URL 填入 script.js
+
+打開 `script.js`，找到以下這行（大約在第 84 行附近）：
+
+```js
+const FIREBASE_DB_URL = "";
+```
+
+將空字串替換成你的資料庫 URL，例如：
+
+```js
+const FIREBASE_DB_URL = "https://YOUR-PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app";
+```
+
+儲存後重新整理頁面，排行榜即會自動從 Firebase 載入，所有裝置都能看到同一份排名 🎉
+
+> 若 `FIREBASE_DB_URL` 保持空字串，遊戲仍正常運作，排行榜改存在本機 localStorage。
 
 ---
 
