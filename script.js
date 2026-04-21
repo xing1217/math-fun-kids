@@ -62,8 +62,10 @@ const SCORE_REWARD = 10;
 const SCORE_PENALTY = 2;
 /** 每連續答對幾題可獲得 1 顆星星 */
 const STAR_STREAK_REQUIREMENT = 3;
-/** 排行榜只保留前幾名 */
+/** 排行榜只保留前幾名（本機模式） */
 const LEADERBOARD_LIMIT = 5;
+/** 線上排行榜顯示前幾名 */
+const ONLINE_LEADERBOARD_LIMIT = 20;
 /** 自動下一題延遲毫秒 */
 const AUTO_NEXT_DELAY_MS = 900;
 /** 答案輸入框聚焦後，等待虛擬鍵盤動畫完成再調整可視區 */
@@ -80,6 +82,12 @@ const ENEMY_DAMAGE_RANDOM_VARIANCE = 4;
 // ===== localStorage Key =====
 const LEADERBOARD_STORAGE_KEY = "mathFunKidsLeaderboardV1";
 const BADGES_STORAGE_KEY = "mathFunKidsBadgesV1";
+
+// ===== 線上排行榜（Firebase Realtime Database）設定 =====
+// 請將下方的空字串改成你的 Firebase 資料庫 URL（結尾不加斜線），例如：
+//   "https://YOUR-PROJECT-default-rtdb.REGION.firebasedatabase.app"
+// 留空 "" 則退回使用本機 localStorage。
+const FIREBASE_DB_URL = "";
 
 // ===== 徽章定義 =====
 const BADGE_DEFINITIONS = [
@@ -852,6 +860,95 @@ function saveLeaderboard() {
 }
 
 /**
+ * 將一筆分數加入本機排行榜，排序後取前 LEADERBOARD_LIMIT 筆並更新 UI。
+ * @param {{ name: string, score: number, stars: number, modeLabel: string, timestamp: number }} entry
+ */
+function saveToLocalLeaderboard(entry) {
+    leaderboardData.push(entry);
+    leaderboardData.sort((a, b) => {
+        if (b.score !== a.score) {
+            return b.score - a.score;
+        }
+        if (b.stars !== a.stars) {
+            return b.stars - a.stars;
+        }
+        return a.timestamp - b.timestamp;
+    });
+    leaderboardData = leaderboardData.slice(0, LEADERBOARD_LIMIT);
+
+    if (saveLeaderboard()) {
+        leaderboardHintText.textContent = "已儲存到本機排行榜（未設定線上資料庫）。";
+    } else {
+        leaderboardHintText.textContent = "儲存失敗：瀏覽器可能禁止 localStorage。";
+    }
+
+    renderLeaderboard();
+}
+
+/**
+ * 從 Firebase Realtime Database 拉取線上排行榜（前 20 筆，依分數排序）。
+ * 回傳陣列，失敗時回傳 null。
+ */
+async function fetchLeaderboardOnline() {
+    try {
+        const url = `${FIREBASE_DB_URL}/leaderboard.json?orderBy="score"&limitToLast=${ONLINE_LEADERBOARD_LIMIT}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        if (!data) {
+            return [];
+        }
+
+        return Object.values(data)
+            .filter((item) => item && typeof item.name === "string" && Number.isFinite(item.score))
+            .sort((a, b) => {
+                if (b.score !== a.score) {
+                    return b.score - a.score;
+                }
+                if (b.stars !== a.stars) {
+                    return b.stars - a.stars;
+                }
+                return a.timestamp - b.timestamp;
+            })
+            .slice(0, ONLINE_LEADERBOARD_LIMIT);
+    } catch (error) {
+        return null;
+    }
+}
+
+/**
+ * 將一筆分數寫入 Firebase Realtime Database。
+ */
+async function saveScoreOnline(entry) {
+    const url = `${FIREBASE_DB_URL}/leaderboard.json`;
+    const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(entry)
+    });
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+}
+
+/**
+ * 重新從 Firebase 載入排行榜並渲染。
+ */
+async function refreshOnlineLeaderboard() {
+    leaderboardHintText.textContent = "線上排行榜載入中…";
+    const data = await fetchLeaderboardOnline();
+    if (data !== null) {
+        leaderboardData = data;
+        renderLeaderboard();
+        leaderboardHintText.textContent = `線上排行榜（共 ${leaderboardData.length} 筆）`;
+    } else {
+        leaderboardHintText.textContent = "⚠️ 線上排行榜暫時無法連線。";
+    }
+}
+
+/**
  * 載入已解鎖徽章。
  */
 function loadBadgeProgress() {
@@ -958,9 +1055,9 @@ function renderLeaderboard() {
 }
 
 /**
- * 儲存目前分數到排行榜（localStorage）。
+ * 儲存目前分數到排行榜（線上 Firebase 優先，無設定時降級為本機）。
  */
-function saveCurrentScore() {
+async function saveCurrentScore() {
     const playerName = playerNameInput.value.trim();
     if (playerName === "") {
         leaderboardHintText.textContent = "請先輸入玩家名稱再儲存分數。";
@@ -975,25 +1072,22 @@ function saveCurrentScore() {
         timestamp: Date.now()
     };
 
-    leaderboardData.push(entry);
-    leaderboardData.sort((a, b) => {
-        if (b.score !== a.score) {
-            return b.score - a.score;
+    if (FIREBASE_DB_URL) {
+        saveScoreButton.disabled = true;
+        leaderboardHintText.textContent = "儲存中…";
+        try {
+            await saveScoreOnline(entry);
+            leaderboardHintText.textContent = "✅ 已儲存到線上排行榜！重新載入中…";
+            await refreshOnlineLeaderboard();
+        } catch (error) {
+            leaderboardHintText.textContent = "⚠️ 線上儲存失敗，已改存至本機。";
+            saveToLocalLeaderboard(entry);
+        } finally {
+            saveScoreButton.disabled = false;
         }
-        if (b.stars !== a.stars) {
-            return b.stars - a.stars;
-        }
-        return a.timestamp - b.timestamp;
-    });
-    leaderboardData = leaderboardData.slice(0, LEADERBOARD_LIMIT);
-
-    if (saveLeaderboard()) {
-        leaderboardHintText.textContent = "排行榜已更新並儲存在此瀏覽器！";
     } else {
-        leaderboardHintText.textContent = "儲存失敗：瀏覽器可能禁止 localStorage。";
+        saveToLocalLeaderboard(entry);
     }
-
-    renderLeaderboard();
 }
 
 /**
@@ -1065,7 +1159,11 @@ function submitAnswer() {
         return;
     }
 
-    const isCorrect = userAnswer === gameState.currentQuestion.answer;
+    // 立即清除題目，防止在自動下一題 delay 期間重複按 Enter 刷分
+    const question = gameState.currentQuestion;
+    gameState.currentQuestion = null;
+
+    const isCorrect = userAnswer === question.answer;
     const messageList = [];
 
     if (isCorrect) {
@@ -1136,7 +1234,7 @@ function submitAnswer() {
         battleLogText.textContent = `${gameState.currentEnemy.name} 反擊造成 ${enemyDamage} 點傷害！`;
 
         playSoundEffect("wrong");
-        messageList.push(`❌ 答錯了！正確答案是 ${gameState.currentQuestion.answer}`);
+        messageList.push(`❌ 答錯了！正確答案是 ${question.answer}`);
         messageList.push(`受到 ${enemyDamage} 點傷害。`);
         if (gameState.playerHp <= 0) {
             gameState.started = false;
@@ -1421,7 +1519,6 @@ playerNameInput.addEventListener("keydown", (event) => {
 });
 
 // ===== 初始渲染 =====
-leaderboardData = loadLeaderboard();
 loadBadgeProgress();
 gameState.playerStats = calculatePlayerStats();
 gameState.playerHp = gameState.playerStats.maxHp;
@@ -1437,6 +1534,15 @@ renderStory();
 renderBattle();
 renderEquipment();
 renderBadges();
-renderLeaderboard();
+
+// 依設定決定使用線上排行榜或本機排行榜
+if (FIREBASE_DB_URL) {
+    renderLeaderboard();
+    refreshOnlineLeaderboard();
+} else {
+    leaderboardData = loadLeaderboard();
+    renderLeaderboard();
+}
+
 setupTouchKeypad();
 setupEquipmentDragDrop();

@@ -18,12 +18,13 @@ body {
 .container {
     width: min(1280px, 100%);
     margin: 0 auto;
-    padding: 24px clamp(12px, 2.5vw, 32px) clamp(32px, 4vh, 40px) clamp(12px, 2.5vw, 32px);
+    padding: clamp(12px, 2vh, 20px) clamp(10px, 2.2vw, 28px) clamp(16px, 2.5vh, 28px) clamp(10px, 2.2vw, 28px);
 }
 
 h1 {
-    margin-bottom: 8px;
+    margin: 0 0 6px;
     text-align: center;
+    font-size: clamp(1.65rem, 2.6vw, 2rem);
 }
 
 h2 {
@@ -33,9 +34,10 @@ h2 {
 }
 
 .subtitle {
-    margin-top: 0;
+    margin: 0 0 10px;
     text-align: center;
     color: #334155;
+    font-size: clamp(0.9rem, 1.8vw, 1rem);
 }
 
 .toolbar,
@@ -43,8 +45,8 @@ h2 {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 14px;
+    gap: 8px;
+    margin-bottom: 10px;
 }
 
 .mode-info {
@@ -56,8 +58,8 @@ h2 {
     background: #ffffffcc;
     border: 2px solid #93c5fd;
     border-radius: 14px;
-    padding: 14px;
-    margin-bottom: 14px;
+    padding: 10px;
+    margin-bottom: 10px;
 }
 
 #score-board {
@@ -72,17 +74,17 @@ h2 {
 }
 
 #question {
-    font-size: 1.35rem;
+    font-size: clamp(1.1rem, 2.1vw, 1.3rem);
     font-weight: 800;
-    margin: 0 0 12px;
+    margin: 0 0 10px;
 }
 
 button,
 input {
-    font-size: 1rem;
+    font-size: clamp(0.92rem, 1.8vw, 1rem);
     border-radius: 10px;
     border: 2px solid #93c5fd;
-    padding: 10px 12px;
+    padding: 8px 10px;
 }
 
 button {
@@ -297,16 +299,16 @@ input {
 }
 
 .touch-keypad {
-    margin-top: 12px;
+    margin-top: 10px;
     display: grid;
     grid-template-columns: repeat(3, minmax(64px, 1fr));
-    gap: 8px;
+    gap: 6px;
     max-width: 280px;
 }
 
 .touch-keypad button {
-    min-height: 46px;
-    font-size: 1.02rem;
+    min-height: 42px;
+    font-size: 0.96rem;
 }
 
 #badge-hint,
@@ -375,21 +377,26 @@ input {
     height: 0;
 }
 
-@media (min-width: 980px) {
+@media (min-width: 720px) {
     #game {
         display: grid;
-        grid-template-columns: repeat(2, minmax(320px, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         grid-template-areas:
+            "actions actions"
             "toolbar toolbar"
             "score question"
             "battle question"
-            "equipment question"
-            "story feedback"
-            "actions actions"
+            "equipment story"
+            "feedback feedback"
             "badge leaderboard"
             "fx fx";
-        gap: 14px;
+        gap: 10px;
         align-items: start;
+    }
+
+    .actions {
+        grid-area: actions;
+        margin-bottom: 0;
     }
 
     .toolbar {
@@ -413,16 +420,8 @@ input {
         grid-area: story;
     }
 
-    .actions {
-        grid-area: actions;
-        margin-bottom: 0;
-    }
-
     #question-area {
         grid-area: question;
-        position: sticky;
-        top: 16px;
-        z-index: 5;
     }
 
     #feedback-area {
@@ -443,6 +442,42 @@ input {
 
     .panel {
         margin-bottom: 0;
+    }
+}
+
+@media (min-width: 980px) {
+    #game {
+        grid-template-columns: repeat(2, minmax(320px, 1fr));
+        grid-template-areas:
+            "actions actions"
+            "toolbar toolbar"
+            "score question"
+            "battle question"
+            "equipment question"
+            "story feedback"
+            "badge leaderboard"
+            "fx fx";
+        gap: 10px;
+        align-items: start;
+    }
+
+    #question-area {
+        position: sticky;
+        top: 10px;
+        z-index: 5;
+    }
+}
+
+@media (min-width: 1200px) {
+    #game {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-areas:
+            "actions actions actions"
+            "toolbar toolbar toolbar"
+            "score question feedback"
+            "battle question story"
+            "equipment badge leaderboard"
+            "equipment fx fx";
     }
 }
 
@@ -488,8 +523,8 @@ input {
 @media (max-width: 620px) {
     .container {
         /* 先給固定值，再用 env() 疊加安全區，作為不支援 env() 的回退寫法 */
-        padding-bottom: 24px;
-        padding-bottom: calc(24px + env(safe-area-inset-bottom));
+        padding-bottom: 14px;
+        padding-bottom: calc(14px + env(safe-area-inset-bottom));
     }
 
     #score-board {
@@ -512,5 +547,15 @@ input {
 
     .touch-keypad {
         max-width: 100%;
+    }
+}
+
+@media (max-height: 820px) {
+    .container {
+        padding-top: 8px;
+    }
+
+    .panel {
+        padding: 8px;
     }
 }

@@ -12,6 +12,13 @@
         <p class="subtitle">適合國小 1-3 年級｜開啟網頁就能直接玩</p>
 
         <section id="game">
+            <div class="actions">
+                <button id="start-game">開始遊戲</button>
+                <button id="next-question">下一題</button>
+                <button id="toggle-auto-next">⏭️ 自動下一題：開</button>
+                <button id="reset">重設進度</button>
+            </div>
+
             <div class="toolbar">
                 <button id="switch-mode">切換到九九乘法</button>
                 <button id="toggle-sound">🔊 音效：開</button>
@@ -82,13 +89,6 @@
                 <p id="story-progress">任務進度：再答對 4 題可前往史萊姆草原</p>
             </div>
 
-            <div class="actions">
-                <button id="start-game">開始遊戲</button>
-                <button id="next-question">下一題</button>
-                <button id="toggle-auto-next">⏭️ 自動下一題：開</button>
-                <button id="reset">重設進度</button>
-            </div>
-
             <div id="question-area" class="panel">
                 <p id="question">按下「開始遊戲」後會出題</p>
                 <input type="text" id="answer" placeholder="請輸入答案" inputmode="numeric" pattern="[0-9]*" aria-label="答案輸入框">
@@ -120,7 +120,7 @@
             </div>
 
             <div id="leaderboard-panel" class="panel">
-                <h2>🏆 本機排行榜（前 5 名）</h2>
+                <h2>🏆 排行榜（前 20 名）</h2>
                 <div class="leaderboard-actions">
                     <input type="text" id="player-name" placeholder="請輸入玩家名稱（最多 12 字）" maxlength="12" aria-label="玩家名稱輸入框">
                     <button id="save-score">儲存目前分數</button>
